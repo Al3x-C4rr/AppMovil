@@ -1,7 +1,8 @@
 // Archivo: LibraryScreen.kt
 // Este archivo contiene el diseño del encabezado de la biblioteca usando Jetpack Compose.
 
-package com.example.playsymphonyapp
+package com.example.playsymphonyapp.screens
+
 
 // Importaciones necesarias para el diseño y funcionalidad de la pantalla
 import androidx.compose.foundation.layout.*  // Para Column, Row, Spacer, padding, etc.
@@ -21,10 +22,11 @@ import androidx.compose.ui.unit.sp  // Para unidades de tamaño de fuente (sp)
 import androidx.compose.foundation.background
 import com.example.playsymphonyapp.ui.theme.DarkBackground  // Color de fondo oscuro (definido en Color.kt)
 import com.example.playsymphonyapp.ui.theme.LightText  // Color de texto claro (definido en Color.kt)
+import com.example.playsymphonyapp.components.LibrarySongs
 
 // Función Composable que define el diseño del encabezado de la biblioteca
 @Composable
-fun LibraryScreen() {
+fun LibraryHeader() {
     // Estado para el texto de búsqueda.
     // `remember` guarda el estado entre recomposiciones (evita que se reinicie).
     // `mutableStateOf(TextFieldValue(""))` crea un estado mutable para el texto de búsqueda.
@@ -105,19 +107,14 @@ fun LibraryScreen() {
 
         // Spacer: Espacio vacío de 16dp de altura (para separar el encabezado del contenido)
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Text: Texto temporal para indicar dónde irán las canciones
-        Text(
-            text = "Aquí irán las canciones...",  // Texto temporal
-            color = LightText,  // Color del texto (blanco)
-            fontSize = 16.sp  // Tamaño de fuente de 16 sp
-        )
     }
+
 }
+
 
 // Vista previa para ver el diseño en Android Studio
 @Preview(showBackground = true)  // Muestra el fondo en la vista previa
 @Composable
-fun LibraryScreenPreview() {
-    LibraryScreen()  // Muestra el LibraryScreen en la vista previa
+fun LibraryHeaderPreview() {
+    LibraryHeader()  // Muestra el LibraryScreen en la vista previa
 }
