@@ -1,19 +1,19 @@
 package com.example.playsymphonyapp.songDatabase
 
 import com.example.playsymphonyapp.R
-val song1 = Song(name = "The Legend", artist = "Toby Fox", duration = 111, icon = R.drawable.deltarune)
+val song1 = Song(name = "Noche Infinita", artist = "Julio Ortíz", duration = 222, icon = R.drawable.deltarune)
 
-val song2 = Song(name = "Field of Hopes and Dreams", artist = "Toby Fox", duration = 161, icon = R.drawable.deltarune)
+val song2 = Song(name = "Estrellas de Oro", artist = "Anderson Hernández", duration = 282, icon = R.drawable.deltarune)
 
-val song3 = Song(name = "Scarlet Forest", artist = "Toby Fox", duration = 128, icon = R.drawable.deltarune)
+val song3 = Song(name = "Camino al Olvido", artist = "Alexander Carrera", duration = 128, icon = R.drawable.deltarune)
 
-val song4 = Song(name = "It's Pronounced \"Rules\"", artist = "Toby Fox", duration = 61, icon = R.drawable.deltarune)
+val song4 = Song(name = "Luces de la Ciudad", artist = "Julio Ortíz", duration = 195, icon = R.drawable.deltarune)
 
-val song5 = Song(name = "BIG SHOT", artist = "Toby Fox", duration = 142, icon = R.drawable.deltarune)
+val song5 = Song(name = "Susurros en el Viento", artist = "Anderson Hernández", duration = 240, icon = R.drawable.deltarune)
 
-val song6 = Song(name = "Attack of the Killer Queen", artist = "Toby Fox", duration = 120, icon = R.drawable.deltarune)
+val song6 = Song(name = "El Salto Final", artist = "JuanJose Mazariegos", duration = 180, icon = R.drawable.deltarune)
 
-val song7 = Song(name = "Ruder Buster", artist = "Toby Fox", duration = 106, icon = R.drawable.deltarune)
+val song7 = Song(name = "Melodía Perdida", artist = "Julio Ortíz", duration = 210, icon = R.drawable.deltarune)
 
 val song8 = Song(name = "TV WORLD", artist = "Toby Fox", duration = 129, icon = R.drawable.deltarune)
 

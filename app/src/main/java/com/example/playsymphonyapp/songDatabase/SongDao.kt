@@ -1,9 +1,9 @@
 package com.example.playsymphonyapp.songDatabase
 
-import androidx.room3.Dao
-import androidx.room3.Delete
-import androidx.room3.Query
-import androidx.room3.Insert
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Query
+import androidx.room.Insert
 
 @Dao
 interface SongDao{
@@ -22,4 +22,7 @@ interface SongDao{
 
     @Query("DELETE FROM songs WHERE name = :songName")
     suspend fun deleteSongByName(songName: String)
+
+    @Query("DELETE FROM songs")
+    suspend fun deleteAllSongs()
 }

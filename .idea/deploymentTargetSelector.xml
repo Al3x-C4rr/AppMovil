@@ -13,7 +13,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="LibrarySongsPreview">
+      <SelectionState runConfigName="unitTest">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-08-04T00:11:38.279623400Z">
           <Target type="DEFAULT_BOOT">
@@ -24,7 +24,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="MainActivity (2)">
+      <SelectionState runConfigName="main">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-08-04T00:11:38.279623400Z">
           <Target type="DEFAULT_BOOT">
@@ -35,7 +35,7 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="MainActivity (3)">
+      <SelectionState runConfigName="androidTest">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2026-08-04T00:11:38.279623400Z">
           <Target type="DEFAULT_BOOT">

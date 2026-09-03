@@ -1,7 +1,7 @@
 package com.example.playsymphonyapp.songDatabase
 
-import androidx.room3.Database
-import androidx.room3.RoomDatabase
+import androidx.room.Database
+import androidx.room.RoomDatabase
 
 @Database(
     entities = [Song::class],
