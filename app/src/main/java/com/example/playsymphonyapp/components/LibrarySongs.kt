@@ -1,9 +1,9 @@
 // Archivo: LibrarySongs.kt
-// Este componente muestra la lista de canciones en formato de tarjetas horizontales.
-// Implementa el diseño oscuro con iconos de colores y menú de opciones.
+// Muestra la lista de canciones MP3 reales y gestiona la reproducción.
 
 package com.example.playsymphonyapp.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,79 +18,87 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.room.Room
 import com.example.playsymphonyapp.songDatabase.*
 import com.example.playsymphonyapp.ui.theme.*
-import java.util.Locale
+import com.example.playsymphonyapp.viewmodels.MusicViewModel
 
 @Composable
-fun LibrarySongs(onSongsCounted: (Int) -> Unit = {}) {
+fun LibrarySongs(
+    viewModel: MusicViewModel,
+    onSongsCounted: (Int) -> Unit = {},
+    onSongSelected: () -> Unit = {}
+) {
     val context = LocalContext.current
-    val database = remember { Room.databaseBuilder(context, SongDatabase::class.java, "song_database").build() }
-    var songs by remember { mutableStateOf<List<Song>>(emptyList()) }
+    val database = remember { 
+        Room.databaseBuilder(context, SongDatabase::class.java, "song_database")
+            .fallbackToDestructiveMigration()
+            .build() 
+    }
+    val songs by viewModel.playlist
 
-    // Carga inicial y sincronización de datos con el código (songList.kt)
+    // Carga inicial y sincronización limpia (Sin borrado automático forzado)
     LaunchedEffect(Unit) {
-        // En fase de desarrollo, limpiamos y volvemos a cargar para reflejar cambios en songList.kt
-        database.songDao().deleteAllSongs()
-        database.songDao().insertSongs(song1, song2, song3, song4, song5, song6, song7)
+        val dao = database.songDao()
+        val allSongs = dao.getAllSongs()
         
-        // Obtenemos la lista actualizada
-        songs = database.songDao().getAllSongs()
+        // Si no hay canciones o estamos probando nuevas entradas (V6), insertamos los 14 ejemplos
+        if (allSongs.size < 14) {
+            dao.deleteAllSongs()
+            dao.insertSongs(song1, song2, song3, song4, song5, song6, song7, song8, song9, song10, song11, song12, song13, song14)
+        }
         
-        // Notifica el conteo total para el encabezado dinámico
+        // Sincronizamos la lista del ViewModel
+        viewModel.loadSongs(dao)
+    }
+    
+    // Notifica el conteo cuando cambie la lista
+    LaunchedEffect(songs) {
         onSongsCounted(songs.size)
     }
 
-    // Lista desplazable de canciones
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(bottom = 16.dp),
     ) {
-        items(songs.indices.toList()) { index ->
-            val song = songs[index]
-            // Selecciona un color de icono basado en el índice
-            val iconColor = when (index % 4) {
-                0 -> IconPurple
-                1 -> IconBlue
-                2 -> IconOrange
-                else -> IconGold
-            }
-            SongCard(song, iconColor)
+        items(songs) { song ->
+            val isCurrent = viewModel.currentSong.value?.id == song.id
             
-            // Línea divisoria sutil entre tarjetas
-            if (index < songs.size - 1) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    thickness = 0.5.dp,
-                    color = Color.Gray.copy(alpha = 0.3f)
-                )
-            }
+            SongCard(
+                song = song,
+                iconColor = if (isCurrent) AccentColor else IconPurple, // Resalta la actual
+                onClick = {
+                    viewModel.playSong(song)
+                    onSongSelected()
+                }
+            )
+            
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 8.dp),
+                thickness = 0.5.dp,
+                color = Color.Gray.copy(alpha = 0.3f)
+            )
         }
     }
 }
 
-// Componente para la tarjeta individual de cada canción
 @Composable
-fun SongCard(song: Song, iconColor: Color) {
+fun SongCard(song: Song, iconColor: Color, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground)
     ) {
         Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(12.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icono de nota musical con fondo circular de color
             Surface(
                 modifier = Modifier.size(50.dp),
                 shape = RoundedCornerShape(25.dp),
@@ -99,7 +107,7 @@ fun SongCard(song: Song, iconColor: Color) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.MusicNote,
-                        contentDescription = "Nota",
+                        contentDescription = null,
                         tint = iconColor,
                         modifier = Modifier.size(28.dp)
                     )
@@ -108,10 +116,9 @@ fun SongCard(song: Song, iconColor: Color) {
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Información de la canción (Nombre y Artista)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = song.name,
+                    text = song.title,
                     color = LightText,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
@@ -122,35 +129,25 @@ fun SongCard(song: Song, iconColor: Color) {
                     fontSize = 13.sp,
                     maxLines = 1
                 )
-            }
-
-            // Duración y menú de opciones
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Convierte duración de segundos a formato MM:SS
-                val minutes = song.duration / 60
-                val seconds = song.duration % 60
-                val timeString = String.format(java.util.Locale.getDefault(), "%d:%02d", minutes, seconds)
-                
-                Text(
-                    text = timeString,
-                    color = Color.Gray,
-                    fontSize = 12.sp,
-                )
-                
-                IconButton(onClick = { /* Opciones */ }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Opciones",
-                        tint = Color.Gray
+                if (song.isEdited) {
+                    Text(
+                        text = "Editado",
+                        color = AccentColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
+
+            Text(
+                text = song.duration,
+                color = Color.Gray,
+                fontSize = 12.sp
+            )
+            
+            IconButton(onClick = { /* Opciones extra */ }) {
+                Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
+            }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LibrarySongsPreview() {
-    LibrarySongs()
 }
