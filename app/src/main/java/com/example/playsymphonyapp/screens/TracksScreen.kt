@@ -43,18 +43,21 @@ import com.example.playsymphonyapp.viewmodels.MusicViewModel
 
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import com.example.playsymphonyapp.components.PianoAdaptable
+
 
 @Composable
 fun TracksScreen(navController: NavController, viewModel: MusicViewModel) {
     var isMenuVisible by remember { mutableStateOf(false) }
+    var selectedSection by remember { mutableStateOf("Tracks") }
     val song by viewModel.currentSong
     val isPlaying by viewModel.isPlaying
     val context = LocalContext.current
     val database = remember { Room.databaseBuilder(context, SongDatabase::class.java, "song_database").build() }
-    
+
     // Estado del scroll para el contenido del editor
     val scrollState = rememberScrollState()
-    
+
     // Estados del ViewModel
     var inPosition by viewModel.inPosition
     var outPosition by viewModel.outPosition
@@ -63,10 +66,10 @@ fun TracksScreen(navController: NavController, viewModel: MusicViewModel) {
 
     Box(modifier = Modifier.fillMaxSize().background(DarkBackground)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            
+
             // BARRA SUPERIOR (Control de reproducción sincronizado)
             AudioCraftTopBar(
-                title = song?.title ?: "Sin pista", 
+                title = song?.title ?: "Sin pista",
                 artist = song?.artist ?: "",
                 isPlaying = isPlaying,
                 onPlayToggle = { viewModel.togglePlayPause() },
@@ -75,24 +78,61 @@ fun TracksScreen(navController: NavController, viewModel: MusicViewModel) {
             )
 
             Row(modifier = Modifier.fillMaxSize()) {
-                if (isMenuVisible) { AudioCraftSidebar() }
+                if (isMenuVisible) {
+                    AudioCraftSidebar(
+                        selectedSection = selectedSection,
+                        onSectionSelected = { section ->
+                            selectedSection = section
+                        }
+                    )
+                }
 
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(8.dp)
                         .background(Color(0xFF0F1019))
-                        .verticalScroll(scrollState) // HABILITAMOS EL SCROLL AQUÍ
+                        .then(
+                        if (selectedSection == "Samples") {
+                            Modifier
+                        } else {
+                            Modifier.verticalScroll(scrollState)
+                        }
+                    )
                 ) {
                     IconButton(onClick = { isMenuVisible = !isMenuVisible }) {
                         Icon(imageVector = if (isMenuVisible) Icons.Default.Close else Icons.Default.Menu, contentDescription = null, tint = LightText)
                     }
 
-                    Text("LÍNEA DE TIEMPO", color = LightText, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
-                    
-                    if (song == null) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Selecciona una canción en la biblioteca", color = Color.Gray)
+                    Text(
+                        text = selectedSection,
+                        color = LightText,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+
+                    if (selectedSection == "Samples") {
+                        PianoAdaptable(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        )
+                    } else if (selectedSection != "Tracks") {
+                        Text(
+                            text = when (selectedSection) {
+                                "Samples" -> "Acá irá el diseño de Samples"
+                                "Timeline" -> "Acá irá el diseño de Timeline"
+                                "Mixer" -> "Acá irá el diseño de Mixer"
+                                "Export" -> "Acá irá el diseño de Export"
+                                else -> ""
+                            },
+                            color = Color.Gray,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    } else if (song == null) {
+                        Box(Modifier.fillMaxSize()) {
+                            Text("Empieza un nuevo proyecto o seleccionalo desde la biblioteca", color = Color.Gray)
                         }
                     } else {
                         // SECCIÓN EDITOR PRINCIPAL (Zoom afecta visualmente aquí)
@@ -108,7 +148,7 @@ fun TracksScreen(navController: NavController, viewModel: MusicViewModel) {
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        
+
                         // SECCIÓN DE TONO (Independiente)
                         PitchControlSection(
                             pitch = viewModel.pitchValue.value,
@@ -138,7 +178,7 @@ fun AudioCraftTopBar(title: String, artist: String, isPlaying: Boolean, onPlayTo
                 Row {
                     IconButton(onClick = onUndoRequested) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Deshacer", tint = LightText) }
                     IconButton(onClick = { showOptions = true }) { Icon(Icons.Default.MoreVert, "Menú", tint = LightText) }
-                    
+
                     DropdownMenu(expanded = showOptions, onDismissRequest = { showOptions = false }, modifier = Modifier.background(Color(0xFF2D2E45))) {
                         DropdownMenuItem(
                             text = { Text("Reiniciar Edición", color = Color.Red) },
@@ -151,16 +191,16 @@ fun AudioCraftTopBar(title: String, artist: String, isPlaying: Boolean, onPlayTo
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = {}) { Icon(Icons.Default.SkipPrevious, null, tint = LightText) }
-                    
+
                     // Botón Play/Stop dinámico del editor
-                    IconButton(onClick = onPlayToggle) { 
+                    IconButton(onClick = onPlayToggle) {
                         Icon(
-                            imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow, 
-                            contentDescription = "Play/Stop", 
-                            tint = if (isPlaying) Color.Red else Color.Green 
-                        ) 
+                            imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            contentDescription = "Play/Stop",
+                            tint = if (isPlaying) Color.Red else Color.Green
+                        )
                     }
-                    
+
                     IconButton(onClick = {}) { Icon(Icons.Default.FiberManualRecord, null, tint = Color.Red) }
                 }
                 Text("01:02:03", color = LightText, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(Color(0xFF2D2E45), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 4.dp))
@@ -225,7 +265,7 @@ fun TimelineEditorSection(
                 Text(" OUT", fontSize = 10.sp)
             }
         }
-        
+
         Spacer(Modifier.height(8.dp))
         Button(onClick = {}, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBB86FC))) {
             Icon(Icons.Default.ContentCut, null, modifier = Modifier.size(18.dp), tint = Color.Black)
@@ -239,7 +279,7 @@ fun TimelineEditorSection(
 fun WaveformEditorPro(inPos: Float, outPos: Float, playPos: Float, onInChange: (Float) -> Unit, onOutChange: (Float) -> Unit, onPlayChange: (Float) -> Unit) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(140.dp).background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(4.dp))) {
         val widthPx = constraints.maxWidth.toFloat()
-        
+
         Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp, start = 4.dp, end = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             listOf("0:00", "0:28", "0:56", "1:23", "1:51", "2:19", "2:47", "3:14").forEach {
                 Text(it, color = Color.Gray, fontSize = 8.sp)
@@ -250,12 +290,12 @@ fun WaveformEditorPro(inPos: Float, outPos: Float, playPos: Float, onInChange: (
             val barWidth = 3f
             val spacing = 3f
             val centerY = size.height / 2
-            
+
             for (i in 0 until (size.width / (barWidth + spacing)).toInt()) {
                 val x = i * (barWidth + spacing)
                 val h = (size.height * 0.2f) + (i % 5) * 15f
                 val isSelected = (x / size.width) in inPos..outPos
-                
+
                 drawLine(
                     color = if (isSelected) Color(0xFFFF9800) else Color.DarkGray, // Naranja Pro
                     start = Offset(x, centerY - h/2),
@@ -263,7 +303,7 @@ fun WaveformEditorPro(inPos: Float, outPos: Float, playPos: Float, onInChange: (
                     strokeWidth = barWidth
                 )
             }
-            
+
             drawRect(Color.Black.copy(alpha = 0.5f), size = Size(inPos * size.width, size.height))
             drawRect(Color.Black.copy(alpha = 0.5f), topLeft = Offset(outPos * size.width, 0f), size = Size((1f - outPos) * size.width, size.height))
         }
@@ -312,9 +352,9 @@ fun PitchControlSection(pitch: Float, onPitchChange: (Float) -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Tune, null, tint = Color.Gray, modifier = Modifier.size(18.dp))
             Text(
-                text = " Tono: ${pitch.toInt()} semitonos", 
-                color = LightText, 
-                fontSize = 14.sp, 
+                text = " Tono: ${pitch.toInt()} semitonos",
+                color = LightText,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.weight(1f))
@@ -325,12 +365,12 @@ fun PitchControlSection(pitch: Float, onPitchChange: (Float) -> Unit) {
                 fontWeight = FontWeight.Black
             )
         }
-        
+
         Slider(
             value = pitch,
             onValueChange = onPitchChange,
             valueRange = -12f..12f,
-            steps = 24, 
+            steps = 24,
             colors = SliderDefaults.colors(
                 thumbColor = trackColor,
                 activeTrackColor = trackColor,
@@ -338,7 +378,7 @@ fun PitchControlSection(pitch: Float, onPitchChange: (Float) -> Unit) {
             ),
             modifier = Modifier.padding(top = 4.dp)
         )
-        
+
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("-12 (Grave)", color = Color.Gray, fontSize = 9.sp)
             Text("0", color = Color.Gray, fontSize = 9.sp)
@@ -362,20 +402,87 @@ fun FadeButtons() {
 }
 
 @Composable
-fun AudioCraftSidebar() {
-    Column(modifier = Modifier.fillMaxHeight().width(80.dp).background(Color(0xFF121212)).padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        SidebarItem(Icons.AutoMirrored.Filled.QueueMusic, "Samples")
-        SidebarItem(Icons.Default.Timeline, "Timeline")
-        SidebarItem(Icons.Default.GraphicEq, "Tracks", isSelected = true)
-        SidebarItem(Icons.Default.Tune, "Mixer")
-        SidebarItem(Icons.Default.FileUpload, "Export")
+fun AudioCraftSidebar(
+    selectedSection: String,
+    onSectionSelected: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(80.dp)
+            .background(Color(0xFF121212))
+            .padding(vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        SidebarItem(
+            icon = Icons.AutoMirrored.Filled.QueueMusic,
+            label = "Samples",
+            isSelected = selectedSection == "Samples",
+            onClick = { onSectionSelected("Samples") }
+        )
+
+        SidebarItem(
+            icon = Icons.Default.Timeline,
+            label = "Timeline",
+            isSelected = selectedSection == "Timeline",
+            onClick = { onSectionSelected("Timeline") }
+        )
+
+        SidebarItem(
+            icon = Icons.Default.GraphicEq,
+            label = "Tracks",
+            isSelected = selectedSection == "Tracks",
+            onClick = { onSectionSelected("Tracks") }
+        )
+
+        SidebarItem(
+            icon = Icons.Default.Tune,
+            label = "Mixer",
+            isSelected = selectedSection == "Mixer",
+            onClick = { onSectionSelected("Mixer") }
+        )
+
+        SidebarItem(
+            icon = Icons.Default.FileUpload,
+            label = "Export",
+            isSelected = selectedSection == "Export",
+            onClick = { onSectionSelected("Export") }
+        )
     }
 }
 
 @Composable
-fun SidebarItem(icon: ImageVector, label: String, isSelected: Boolean = false) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(imageVector = icon, contentDescription = null, tint = if (isSelected) Color(0xFFBB86FC) else Color.Gray, modifier = Modifier.size(28.dp))
-        Text(label, color = if (isSelected) Color(0xFFBB86FC) else Color.Gray, fontSize = 10.sp)
+fun SidebarItem(
+    icon: ImageVector,
+    label: String,
+    isSelected: Boolean = false,
+    onClick: () -> Unit
+) {
+    val itemColor = if (isSelected) {
+        Color(0xFFBB86FC)
+    } else {
+        Color.Gray
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = itemColor,
+            modifier = Modifier.size(28.dp)
+        )
+
+        Text(
+            text = label,
+            color = itemColor,
+            fontSize = 10.sp
+        )
     }
 }

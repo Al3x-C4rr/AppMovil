@@ -57,6 +57,8 @@ dependencies {
     implementation(libs.androidx.room.common)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.ui)
+    implementation(libs.navigation.compose)
 
     ksp(libs.androidx.room.compiler)
 
@@ -69,4 +71,6 @@ dependencies {
 
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    implementation("androidx.appcompat:appcompat:1.8.0")
 }

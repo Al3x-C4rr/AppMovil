@@ -1,5 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <style name ="Base.theme.Piano" parent="Theme.AppCompat.NoActionBar">
+    </style>
 
-    <style name="Theme.PlaySymphonyApp" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.PlaySymphonyApp" parent="Theme.AppCompat.NoActionBar" > </style>
+
+    <style name ="KeyButtonStyle" parent="Widget.AppCompat.Button">
+        <item name="android:layout_width">74dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_marginStart">2dp</item>
+        <item name="android:gravity">bottom|center_horizontal</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:textColor">@color/black</item>
+        <item name="android:background">@color/white</item>
+    </style>
+
+    <style name ="SharpkeyButtonStyle" parent="Widget.AppCompat.Button">
+        <item name="android:layout_width">52dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:background">@drawable/black_key_background</item>
+        <item name="android:layout_marginTop">-25dp</item>
+    </style>
+
+
+
+
 </resources>
+
+
