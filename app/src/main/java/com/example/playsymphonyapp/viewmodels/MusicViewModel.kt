@@ -4,15 +4,17 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.playsymphonyapp.songDatabase.Song
 import com.example.playsymphonyapp.songDatabase.SongDao
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import android.app.Application
+import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
 
-class MusicViewModel : ViewModel() {
+class MusicViewModel(application: Application) : AndroidViewModel(application) {
 
     val playlist = mutableStateOf<List<Song>>(emptyList())
     val currentSong = mutableStateOf<Song?>(null)
@@ -123,7 +125,17 @@ class MusicViewModel : ViewModel() {
                 true
             }
 
-            player.setDataSource(song.filePath)
+            val source = song.filePath
+
+            if (source.startsWith("content://") || source.startsWith("file://")) {
+                player.setDataSource(
+                    getApplication<Application>(),
+                    Uri.parse(source)
+                )
+            } else {
+                // Compatibilidad con las rutas de archivo anteriores.
+                player.setDataSource(source)
+            }
             player.prepareAsync()
         } catch (exception: Exception) {
             releasePlayer()
