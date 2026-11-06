@@ -36,6 +36,8 @@ fun TracksScreen(
     val recorder = remember { Recorder() }
     val pistas = remember { mutableStateListOf<TimelineTrack>() }
 
+
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -47,7 +49,11 @@ fun TracksScreen(
             isPlaying = isPlaying,
             onPlayToggle = { viewModel.togglePlayPause() },
             onResetRequested = { viewModel.resetEditor() },
-            onUndoRequested = { viewModel.undoLastEdit() }
+            onUndoRequested = { viewModel.undoLastEdit() },
+            recorder = recorder,
+            onTrackRecorded = { pista ->
+                pistas.add(pista)
+            }
         )
 
         TracksWorkspace(

@@ -59,26 +59,26 @@ fun TracksWorkspace(
                         Modifier.verticalScroll(scrollState)
                     }
                 )
-        ) {
-            IconButton(onClick = onMenuToggle) {
-                Icon(
-                    imageVector = if (isMenuVisible) {
-                        Icons.Default.Close
-                    } else {
-                        Icons.Default.Menu
-                    },
-                    contentDescription = null,
-                    tint = LightText
-                )
-            }
+        ) { Row(){IconButton(onClick = onMenuToggle) {
+            Icon(
+                imageVector = if (isMenuVisible) {
+                    Icons.Default.Close
+                } else {
+                    Icons.Default.Menu
+                },
+                contentDescription = null,
+                tint = LightText
+            )
+        }
 
             Text(
                 text = selectedSection,
                 color = LightText,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 8.dp)
-            )
+                modifier = Modifier.padding(start = 8.dp).padding(top = 12.dp).padding(bottom = 13.dp)
+            )}
+
 
             when (selectedSection) {
                 "Samples" -> {
@@ -112,7 +112,7 @@ fun TracksWorkspace(
 
                 "Mixer" -> {
                     if (hasSong) {
-                        tracksContent()
+                        MixerSection(pistas = pistas)
                     } else {
                         newProyectSuggestion()
                     }

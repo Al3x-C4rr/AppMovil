@@ -30,7 +30,9 @@ fun AudioCraftTopBar(
     isPlaying: Boolean,
     onPlayToggle: () -> Unit,
     onResetRequested: () -> Unit,
-    onUndoRequested: () -> Unit
+    onUndoRequested: () -> Unit,
+    recorder: Recorder,
+    onTrackRecorded: (TimelineTrack) -> Unit
 ) {
     var showOptions by remember { mutableStateOf(false) }
 
@@ -136,10 +138,26 @@ fun AudioCraftTopBar(
                         )
                     }
 
-                    IconButton(onClick = {}) {
+                    IconButton(
+                        onClick = {
+                            if (recorder.isRecording) {
+                                recorder.stopAsTrack()?.let(onTrackRecorded)
+                            } else {
+                                recorder.start()
+                            }
+                        }
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.FiberManualRecord,
-                            contentDescription = null,
+                            imageVector = if (recorder.isRecording) {
+                                Icons.Default.Stop
+                            } else {
+                                Icons.Default.FiberManualRecord
+                            },
+                            contentDescription = if (recorder.isRecording) {
+                                "Detener grabación"
+                            } else {
+                                "Grabar"
+                            },
                             tint = Color.Red
                         )
                     }

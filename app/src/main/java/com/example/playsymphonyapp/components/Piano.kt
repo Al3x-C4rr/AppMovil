@@ -1,5 +1,6 @@
 //Fase de prueba con funcionalidad del piano
 
+
 package com.example.playsymphonyapp.components
 import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
@@ -67,6 +68,22 @@ private val blackKeySounds = arrayOf(
     R.raw.a66, R.raw.c66, R.raw.d66, R.raw.f66, R.raw.g66,
     R.raw.a77, R.raw.c77, R.raw.d77, R.raw.f77, R.raw.g77
 )
+
+
+// Convención usada: c1 = Do1 (MIDI 24), a1 = La1 (MIDI 33).
+// a11 = La#1, c11 = Do#1, etc., según tus arrays originales.
+private val pianoMidiByResource: Map<Int, Int> = buildMap {
+    val whiteSemitones = intArrayOf(9, 11, 0, 2, 4, 5, 7)
+    whiteKeySounds.forEachIndexed { index, resource ->
+        val octave = index / 7 + 1
+        put(resource, (octave + 1) * 12 + whiteSemitones[index % 7])
+    }
+    val blackSemitones = intArrayOf(10, 1, 3, 6, 8)
+    blackKeySounds.forEachIndexed { index, resource ->
+        val octave = index / 5 + 1
+        put(resource, (octave + 1) * 12 + blackSemitones[index % 5])
+    }
+}
 
 
 class MainActivity : AppCompatActivity() {
@@ -145,11 +162,15 @@ fun PianoView(recorder: Recorder) {
         whiteKeySounds = whiteKeySounds,
         blackKeySounds = blackKeySounds,
         onPlaySound = { soundResource ->
-            recorder.register(soundResource)
 
             val player = MediaPlayer.create(context, soundResource)
 
             if (player != null) {
+                recorder.register(
+                    recurso = soundResource,
+                    midi = pianoMidiByResource.getValue(soundResource),
+                    durationMs = player.duration.toLong()
+                )
                 players.add(player)
 
                 player.setOnCompletionListener { finished ->
