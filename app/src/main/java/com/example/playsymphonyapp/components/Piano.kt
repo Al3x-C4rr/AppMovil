@@ -98,6 +98,8 @@ class MainActivity : AppCompatActivity() {
     }
     private fun playSound(soundResource: Int) {
 
+
+
         mediaPlayer = MediaPlayer.create(this, soundResource)
         mediaPlayer.start()
 
@@ -117,13 +119,16 @@ class MainActivity : AppCompatActivity() {
     }
 }
 @Composable
-fun PianoAdaptable(modifier: Modifier = Modifier) {
+fun PianoAdaptable(
+    recorder: Recorder,
+    modifier: Modifier = Modifier
+) {
     Box(modifier = modifier) {
-        PianoView()
+        PianoView(recorder = recorder)
     }
 }
 @Composable
-fun PianoView() {
+fun PianoView(recorder: Recorder) {
     val context = LocalContext.current
     val players = remember { mutableSetOf<MediaPlayer>() }
 
@@ -140,6 +145,8 @@ fun PianoView() {
         whiteKeySounds = whiteKeySounds,
         blackKeySounds = blackKeySounds,
         onPlaySound = { soundResource ->
+            recorder.register(soundResource)
+
             val player = MediaPlayer.create(context, soundResource)
 
             if (player != null) {
