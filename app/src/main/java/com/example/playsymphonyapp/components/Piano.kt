@@ -1,5 +1,6 @@
 //Fase de prueba con funcionalidad del piano
 
+
 package com.example.playsymphonyapp.components
 import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
@@ -69,6 +70,22 @@ private val blackKeySounds = arrayOf(
 )
 
 
+// Convención usada: c1 = Do1 (MIDI 24), a1 = La1 (MIDI 33).
+// a11 = La#1, c11 = Do#1, etc., según tus arrays originales.
+private val pianoMidiByResource: Map<Int, Int> = buildMap {
+    val whiteSemitones = intArrayOf(9, 11, 0, 2, 4, 5, 7)
+    whiteKeySounds.forEachIndexed { index, resource ->
+        val octave = index / 7 + 1
+        put(resource, (octave + 1) * 12 + whiteSemitones[index % 7])
+    }
+    val blackSemitones = intArrayOf(10, 1, 3, 6, 8)
+    blackKeySounds.forEachIndexed { index, resource ->
+        val octave = index / 5 + 1
+        put(resource, (octave + 1) * 12 + blackSemitones[index % 5])
+    }
+}
+
+
 class MainActivity : AppCompatActivity() {
     private lateinit var mediaPlayer: MediaPlayer
 
@@ -98,6 +115,8 @@ class MainActivity : AppCompatActivity() {
     }
     private fun playSound(soundResource: Int) {
 
+
+
         mediaPlayer = MediaPlayer.create(this, soundResource)
         mediaPlayer.start()
 
@@ -117,13 +136,16 @@ class MainActivity : AppCompatActivity() {
     }
 }
 @Composable
-fun PianoAdaptable(modifier: Modifier = Modifier) {
+fun PianoAdaptable(
+    recorder: Recorder,
+    modifier: Modifier = Modifier
+) {
     Box(modifier = modifier) {
-        PianoView()
+        PianoView(recorder = recorder)
     }
 }
 @Composable
-fun PianoView() {
+fun PianoView(recorder: Recorder) {
     val context = LocalContext.current
     val players = remember { mutableSetOf<MediaPlayer>() }
 
@@ -140,9 +162,15 @@ fun PianoView() {
         whiteKeySounds = whiteKeySounds,
         blackKeySounds = blackKeySounds,
         onPlaySound = { soundResource ->
+
             val player = MediaPlayer.create(context, soundResource)
 
             if (player != null) {
+                recorder.register(
+                    recurso = soundResource,
+                    midi = pianoMidiByResource.getValue(soundResource),
+                    durationMs = player.duration.toLong()
+                )
                 players.add(player)
 
                 player.setOnCompletionListener { finished ->
