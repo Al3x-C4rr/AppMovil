@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.playsymphonyapp.ui.theme.LightText
+import androidx.compose.runtime.*
 
 @Composable
 fun TracksWorkspace(
@@ -27,25 +28,18 @@ fun TracksWorkspace(
     onSectionSelected: (String) -> Unit,
     recorder: Recorder,
     pistas: List<TimelineTrack>,
-    posicion: Float,
-    onPositionChange: (Float) -> Unit,
     tracksContent: @Composable () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    var posicion by remember { mutableStateOf(0f) }
 
     val ultimoFinal = pistas
         .flatMap { it.clips }
-        .maxOfOrNull { it.start + it.duration }
-        ?: 0f
+        .maxOfOrNull { it.start + it.duration } ?: 0f
 
-    val duracion = maxOf(
-        15,
-        ultimoFinal.toInt() + 1
-    )
+    val duracion = maxOf(15, ultimoFinal.toInt() + 1)
 
-    Row(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    Row(modifier = Modifier.fillMaxSize()) {
         if (isMenuVisible) {
             AudioCraftSidebar(
                 selectedSection = selectedSection,
@@ -59,38 +53,32 @@ fun TracksWorkspace(
                 .padding(8.dp)
                 .background(Color(0xFF0F1019))
                 .then(
-                    if (
-                        selectedSection == "Samples" ||
-                        selectedSection == "Timeline"
-                    ) {
+                    if (selectedSection == "Samples") {
                         Modifier
                     } else {
                         Modifier.verticalScroll(scrollState)
                     }
                 )
-        ) {
-            IconButton(
-                onClick = onMenuToggle
-            ) {
-                Icon(
-                    imageVector = if (isMenuVisible) {
-                        Icons.Default.Close
-                    } else {
-                        Icons.Default.Menu
-                    },
-                    contentDescription =
-                        "Mostrar u ocultar secciones",
-                    tint = LightText
-                )
-            }
+        ) { Row(){IconButton(onClick = onMenuToggle) {
+            Icon(
+                imageVector = if (isMenuVisible) {
+                    Icons.Default.Close
+                } else {
+                    Icons.Default.Menu
+                },
+                contentDescription = null,
+                tint = LightText
+            )
+        }
 
             Text(
                 text = selectedSection,
                 color = LightText,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 8.dp)
-            )
+                modifier = Modifier.padding(start = 8.dp).padding(top = 12.dp).padding(bottom = 13.dp)
+            )}
+
 
             when (selectedSection) {
                 "Samples" -> {
@@ -102,12 +90,20 @@ fun TracksWorkspace(
                     )
                 }
 
+                "Tracks" -> {
+                    if (hasSong) {
+                        tracksContent()
+                    } else {
+                        newProyectSuggestion()
+                    }
+                }
+
                 "Timeline" -> {
                     TimeLineSection(
                         tracks = pistas,
                         durationSeconds = duracion,
                         positionSeconds = posicion,
-                        onPositionChange = onPositionChange,
+                        onPositionChange = { posicion = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(400.dp)
@@ -115,9 +111,11 @@ fun TracksWorkspace(
                 }
 
                 "Mixer" -> {
-                    MixerSection(
-                        pistas = pistas
-                    )
+                    if (hasSong) {
+                        MixerSection(pistas = pistas)
+                    } else {
+                        newProyectSuggestion()
+                    }
                 }
 
                 "Export" -> {
@@ -128,12 +126,14 @@ fun TracksWorkspace(
                     }
                 }
 
-                "Tracks" -> {
-                    if (hasSong) {
-                        tracksContent()
-                    } else {
-                        newProyectSuggestion()
-                    }
+                else -> {
+                    Text(
+                        text = when (selectedSection) {
+                            else -> ""
+                        },
+                        color = Color.Gray,
+                        modifier = Modifier.padding(16.dp)
+                    )
                 }
             }
         }
