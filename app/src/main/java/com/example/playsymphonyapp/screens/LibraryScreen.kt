@@ -2,7 +2,8 @@
 // Pantalla de biblioteca con soporte para reproducción real y ViewModel.
 
 package com.example.playsymphonyapp.screens
-
+import androidx.compose.ui.res.stringResource
+import com.example.playsymphonyapp.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -39,7 +40,7 @@ fun LibraryScreen(navController: NavController, viewModel: MusicViewModel) {
             horizontalAlignment = Alignment.Start,
         ) {
             Text(
-                text = "$songCount CANCIONES",
+                text = stringResource(R.string.songs_count, songCount),
                 color = AccentColor,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,

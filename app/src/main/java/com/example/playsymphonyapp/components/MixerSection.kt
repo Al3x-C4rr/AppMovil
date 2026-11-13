@@ -1,9 +1,5 @@
 package com.example.playsymphonyapp.components
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,159 +8,230 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.progressBarRangeInfo
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.setProgress
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import kotlin.math.abs
-import kotlin.math.log10
-import kotlin.math.roundToInt
+import com.example.playsymphonyapp.R
+import com.example.playsymphonyapp.Editor.ProjectTrack
 
-private val MixerPurple = Color(0xFFBB86FC)
-private val MixerCard = Color(0xFF1A1B2E)
-private val MixerMuted = Color(0xFFB0B1C4)
-
-private data class VisualMixerChannel(
+private data class MixerControls(
     val name: String,
-    val color: Color,
     val volume: Float = 0.75f,
     val pan: Float = 0f,
     val mute: Boolean = false,
-    val solo: Boolean = false,
-    val low: Float = 0f,
-    val mid: Float = 0f,
-    val high: Float = 0f,
-    val reverb: Float = 0.25f
+    val solo: Boolean = false
 )
 
-/**
- * No procesa ni reproduce audio.
- */
 @Composable
 fun MixerSection(
-    pistas: List<TimelineTrack>,
-    modifier: Modifier = Modifier
+    pistas: List<TimelineTrack> = emptyList(),
+    modifier: Modifier = Modifier,
+    tracks: List<ProjectTrack> = emptyList(),
+    master: Float = 1f,
+    enabled: Boolean = true,
+    onTrackChange: (ProjectTrack) -> Unit = {},
+    onMasterChange: (Float) -> Unit = {},
+    onEditStart: () -> Unit = {}
 ) {
-
-    val occurrences = mutableMapOf<String, Int>()
-    val keys = pistas.map { track ->
-        val occurrence = occurrences.getOrDefault(track.name, 0)
-        occurrences[track.name] = occurrence + 1
-        "track:${track.name}:$occurrence"
-    } + "master"
-    val channels = pistas.mapIndexed { index, track ->
-
-    LaunchedEffect(keys) {
+    // Compatibilidad con la llamada anterior de TracksWorkspace.
+    val preview = remember {
+        mutableStateMapOf<String, MixerControls>()
     }
 
-    fun update(index: Int, channel: VisualMixerChannel) {
-        settings[keys[index]] = channel
+    val channels = if (tracks.isNotEmpty()) {
+        tracks.map {
+            MixerControls(
+                it.name,
+                it.volume,
+                it.pan,
+                it.mute,
+                it.solo
+            )
+        }
+    } else {
+        pistas.mapIndexed { index, track ->
+            preview["$index:${track.name}"]
+                ?: MixerControls(track.name)
+        }
     }
 
-    Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    fun update(index: Int, value: MixerControls) {
+        tracks.getOrNull(index)?.let { track ->
+            onTrackChange(
+                track.copy(
+                    volume = value.volume,
+                    pan = value.pan,
+                    mute = value.mute,
+                    solo = value.solo
+                )
+            )
+        } ?: run {
+            preview["$index:${pistas[index].name}"] = value
+        }
+    }
 
-            Row(
-            ) {
-                channels.forEachIndexed { index, channel ->
-                    Surface(
-                        color = MixerCard,
-                        shape = RoundedCornerShape(16.dp),
-                        border = androidx.compose.foundation.BorderStroke(
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
+    val count = channels.size + 1
+    var masterEditing by remember { mutableStateOf(false) }
 
-                            val panLabel = when {
-                                abs(channel.pan) < 0.01f -> "Centro"
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val gap = 12.dp
+        val visible = minOf(count, 2)
+
+        val width = (
+                (maxWidth - gap * (visible - 1)) / visible
+                ).coerceAtLeast(0.dp)
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(
+                    rememberScrollState(),
+                    enabled = count > 2
+                ),
+            horizontalArrangement = Arrangement.spacedBy(gap)
+        ) {
+            channels.forEachIndexed { index, channel ->
+                key(
+                    tracks.getOrNull(index)?.id
+                        ?: "$index:${channel.name}"
+                ) {
+                    var volumeEditing by remember {
+                        mutableStateOf(false)
+                    }
+
+                    var panEditing by remember {
+                        mutableStateOf(false)
+                    }
+
+                    MixerChannelCard(channel.name, width) {
+                        Text(
+                            "${(channel.volume * 100).toInt()} %",
+                            color = Color.White
+                        )
+
+                        Slider(
+                            value = channel.volume,
+                            enabled = enabled,
+                            onValueChange = {
+                                if (!volumeEditing) {
+                                    onEditStart()
+                                    volumeEditing = true
                                 }
-                            Slider(
-                                value = channel.pan,
-                                valueRange = -1f..1f,
+
+                                update(index, channel.copy(volume = it))
+                            },
+                            onValueChangeFinished = {
+                                volumeEditing = false
+                            }
+                        )
+
+                        Text(
+                            stringResource(R.string.pan),
+                            color = Color.LightGray
+                        )
+
+                        Slider(
+                            value = channel.pan,
+                            valueRange = -1f..1f,
+                            enabled = enabled,
+                            onValueChange = {
+                                if (!panEditing) {
+                                    onEditStart()
+                                    panEditing = true
+                                }
+
+                                update(index, channel.copy(pan = it))
+                            },
+                            onValueChangeFinished = {
+                                panEditing = false
+                            }
+                        )
+
+                        FilterChip(
+                            selected = channel.mute,
+                            enabled = enabled,
+                            onClick = {
+                                onEditStart()
+                                update(
+                                    index,
+                                    channel.copy(mute = !channel.mute)
                                 )
-                                FilterChip(
-                                    selected = channel.mute,
-                                        )
-                                        selected = channel.solo,
-                                    )
-                                }
-                            MixerVolumeFader(
-                                value = channel.volume,
-                                color = channel.color,
-                                label = "Volumen ${channel.name}",
-                            )
+                            },
+                            label = {
+                                Text(stringResource(R.string.mute))
+                            }
+                        )
+
+                        FilterChip(
+                            selected = channel.solo,
+                            enabled = enabled,
+                            onClick = {
+                                onEditStart()
+                                update(
+                                    index,
+                                    channel.copy(solo = !channel.solo)
+                                )
+                            },
+                            label = {
+                                Text(stringResource(R.string.solo))
+                            }
+                        )
                     }
                 }
             }
-        }
 
-        val current = channels[selected]
-                Spacer(Modifier.height(8.dp))
-                    update(selected, current.copy(low = it))
-                }
-                    update(selected, current.copy(mid = it))
-                }
-                    update(selected, current.copy(high = it))
-                }
-                    update(selected, current.copy(reverb = it / 100))
-                }
+            MixerChannelCard(
+                stringResource(R.string.master),
+                width
+            ) {
+                Text(
+                    "${(master * 100).toInt()} %",
+                    color = Color.White
+                )
+
+                Slider(
+                    value = master,
+                    enabled = enabled,
+                    onValueChange = {
+                        if (!masterEditing) {
+                            onEditStart()
+                            masterEditing = true
+                        }
+
+                        onMasterChange(it)
+                    },
+                    onValueChangeFinished = {
+                        masterEditing = false
+                    }
+                )
+
+                Text(
+                    stringResource(R.string.master_help),
+                    color = Color.LightGray
+                )
             }
         }
     }
 }
 
 @Composable
-private fun MixerEffectSlider(
-    title: String,
-    value: Float,
-    range: ClosedFloatingPointRange<Float>,
-    unit: String,
-    onChange: (Float) -> Unit
+private fun MixerChannelCard(
+    name: String,
+    width: androidx.compose.ui.unit.Dp,
+    content: @Composable ColumnScope.() -> Unit
 ) {
-        Slider(
-            value = value,
-            onValueChange = onChange,
-            valueRange = range,
-        )
-    }
-}
-
-@Composable
-    val onChange by rememberUpdatedState(onValueChange)
-    Canvas(
-            .semantics {
-                contentDescription = label
-            }
-            .pointerInput(Unit) {
-                val edge = 16.dp.toPx()
-                detectTapGestures { point ->
-                }
-            }
-            .pointerInput(Unit) {
-                val edge = 16.dp.toPx()
-                detectVerticalDragGestures { change, _ ->
-                    change.consume()
-                }
-            }
+    Surface(
+        modifier = Modifier.width(width),
+        color = Color(0xFF1A1B2E),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        val edge = 16.dp.toPx()
-        val travel = size.height - 2 * edge
-        val x = size.width / 2
-        val y = edge + (1 - value) * travel
-        for (step in 0..10) {
-            val tick = edge + travel * step / 10
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(name, color = Color(0xFFBB86FC))
+            content()
         }
     }
 }

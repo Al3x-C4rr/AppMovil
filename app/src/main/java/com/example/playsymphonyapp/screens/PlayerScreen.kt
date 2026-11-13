@@ -2,7 +2,8 @@
 // Pantalla de reproducción conectada al motor de audio real.
 
 package com.example.playsymphonyapp.screens
-
+import androidx.compose.ui.res.stringResource
+import com.example.playsymphonyapp.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,10 +47,10 @@ fun PlayerScreen(navController: NavController, viewModel: MusicViewModel) {
         ) {
             Icon(Icons.Default.MusicNote, null, tint = Color.Gray, modifier = Modifier.size(100.dp))
             Spacer(Modifier.height(16.dp))
-            Text("Selecciona una canción en la biblioteca", color = Color.Gray)
+            Text(stringResource(R.string.select_song), color = Color.Gray)
             Spacer(Modifier.height(32.dp))
             Button(onClick = { navController.navigate("library") }) {
-                Text("Ir a Biblioteca")
+                Text(stringResource(R.string.go_library))
             }
         }
         return
@@ -64,7 +65,7 @@ fun PlayerScreen(navController: NavController, viewModel: MusicViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "Reproduciendo",
+            text = stringResource(R.string.now_playing),
             color = LightText,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
@@ -162,7 +163,7 @@ fun PlayerScreen(navController: NavController, viewModel: MusicViewModel) {
         ) {
             Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("ABRIR EN EDITOR", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.open_editor), fontWeight = FontWeight.Bold)
         }
     }
 }

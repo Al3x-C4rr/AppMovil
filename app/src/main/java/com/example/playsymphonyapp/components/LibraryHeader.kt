@@ -2,7 +2,8 @@
 // Encabezado con buscador y menú desplegable sincronizado.
 
 package com.example.playsymphonyapp.components
-
+import androidx.compose.ui.res.stringResource
+import com.example.playsymphonyapp.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
@@ -39,7 +40,7 @@ fun LibraryHeader(navController: NavController? = null) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "Biblioteca",
+                text=stringResource(R.string.library),
                 color = LightText,
                 fontSize = 20.sp,
                 modifier = Modifier.weight(1f)
@@ -62,19 +63,23 @@ fun LibraryHeader(navController: NavController? = null) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (searchText.text.isEmpty()) {
-                            Text("Buscar...", color = Color.Gray, fontSize = 14.sp)
+                            Text(
+                                text = stringResource(R.string.search_hint),
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
                         }
                         innerTextField()
                     }
                 }
             )
 
-            Icon(Icons.Default.Search, "Buscar", tint = LightText, modifier = Modifier.padding(start = 8.dp))
+            Icon(Icons.Default.Search, stringResource(R.string.search), tint = LightText, modifier = Modifier.padding(start = 8.dp))
 
             // Menú desplegable sincronizado con la navegación universal
             Box {
                 IconButton(onClick = { menuExpanded = true }) {
-                    Icon(Icons.Default.Menu, "Menú", tint = LightText)
+                    Icon(Icons.Default.Menu, stringResource(R.string.menu), tint = LightText)
                 }
                 DropdownMenu(
                     expanded = menuExpanded,
@@ -82,14 +87,14 @@ fun LibraryHeader(navController: NavController? = null) {
                     modifier = Modifier.background(Color(0xFF1E1E1E))
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Editor", color = LightText) },
+                        text = { Text(stringResource(R.string.editor), color = LightText) },
                         onClick = {
                             menuExpanded = false
                             navigateSafely(navController, "tracks")
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Reproductor", color = LightText) },
+                        text = { Text(stringResource(R.string.player), color = LightText) },
                         onClick = {
                             menuExpanded = false
                             navigateSafely(navController, "player")

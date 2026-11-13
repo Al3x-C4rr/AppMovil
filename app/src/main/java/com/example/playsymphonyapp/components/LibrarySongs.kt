@@ -1,5 +1,6 @@
 package com.example.playsymphonyapp.components
-
+import androidx.compose.ui.res.stringResource
+import com.example.playsymphonyapp.R
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -249,7 +250,7 @@ fun SongCard(
 
                 if (song.isEdited) {
                     Text(
-                        text = "Editado",
+                        text=stringResource(R.string.edited),
                         color = AccentColor,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
@@ -270,7 +271,7 @@ fun SongCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Más opciones",
+                    contentDescription = stringResource(R.string.more_options),
                     tint = Color.Gray
                 )
             }

@@ -1,488 +1,651 @@
-// Archivo: TracksScreen.kt
-// Rediseño profesional "AudioCraft Pro" con Waveform Naranja/Gris.
-// Velocidad exclusiva de Línea de Tiempo y controles de reproducción sincronizados.
-
 package com.example.playsymphonyapp.screens
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.QueueMusic
-import androidx.compose.material.icons.automirrored.filled.TrendingDown
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
-import androidx.room.Room
-import com.example.playsymphonyapp.songDatabase.SongDatabase
-import com.example.playsymphonyapp.ui.theme.DarkBackground
-import com.example.playsymphonyapp.ui.theme.LightText
-import com.example.playsymphonyapp.viewmodels.MusicViewModel
-
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import com.example.playsymphonyapp.R
+import com.example.playsymphonyapp.components.MixerSection
 import com.example.playsymphonyapp.components.PianoAdaptable
+import com.example.playsymphonyapp.components.Recorder
+import com.example.playsymphonyapp.Editor.ProjectTrack
+import com.example.playsymphonyapp.Editor.ProjectViewModel
+import com.example.playsymphonyapp.viewmodels.MusicViewModel
+import java.io.File
+import java.util.Locale
+import kotlin.math.roundToLong
 
+private val EditorCard = Color(0xFF1A1B2E)
+private val EditorAccent = Color(0xFFBB86FC)
 
-@Composable
-fun TracksScreen(navController: NavController, viewModel: MusicViewModel) {
-    var isMenuVisible by remember { mutableStateOf(false) }
-    var selectedSection by remember { mutableStateOf("Tracks") }
-    val song by viewModel.currentSong
-    val isPlaying by viewModel.isPlaying
-    val context = LocalContext.current
-    val database = remember { Room.databaseBuilder(context, SongDatabase::class.java, "song_database").build() }
-
-    // Estado del scroll para el contenido del editor
-    val scrollState = rememberScrollState()
-
-    // Estados del ViewModel
-    var inPosition by viewModel.inPosition
-    var outPosition by viewModel.outPosition
-    var playheadPosition by viewModel.playheadPosition
-    var zoomScale by viewModel.zoomScale
-
-    Box(modifier = Modifier.fillMaxSize().background(DarkBackground)) {
-        Column(modifier = Modifier.fillMaxSize()) {
-
-            // BARRA SUPERIOR (Control de reproducción sincronizado)
-            AudioCraftTopBar(
-                title = song?.title ?: "Sin pista",
-                artist = song?.artist ?: "",
-                isPlaying = isPlaying,
-                onPlayToggle = { viewModel.togglePlayPause() },
-                onResetRequested = { viewModel.resetEditor() },
-                onUndoRequested = { viewModel.undoLastEdit() }
-            )
-
-            Row(modifier = Modifier.fillMaxSize()) {
-                if (isMenuVisible) {
-                    AudioCraftSidebar(
-                        selectedSection = selectedSection,
-                        onSectionSelected = { section ->
-                            selectedSection = section
-                        }
-                    )
-                }
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp)
-                        .background(Color(0xFF0F1019))
-                        .then(
-                        if (selectedSection == "Samples") {
-                            Modifier
-                        } else {
-                            Modifier.verticalScroll(scrollState)
-                        }
-                    )
-                ) {
-                    IconButton(onClick = { isMenuVisible = !isMenuVisible }) {
-                        Icon(imageVector = if (isMenuVisible) Icons.Default.Close else Icons.Default.Menu, contentDescription = null, tint = LightText)
-                    }
-
-                    Text(
-                        text = selectedSection,
-                        color = LightText,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-
-                    if (selectedSection == "Samples") {
-                        PianoAdaptable(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                        )
-                    } else if (selectedSection != "Tracks") {
-                        Text(
-                            text = when (selectedSection) {
-                                "Samples" -> "Acá irá el diseño de Samples"
-                                "Timeline" -> "Acá irá el diseño de Timeline"
-                                "Mixer" -> "Acá irá el diseño de Mixer"
-                                "Export" -> "Acá irá el diseño de Export"
-                                else -> ""
-                            },
-                            color = Color.Gray,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    } else if (song == null) {
-                        Box(Modifier.fillMaxSize()) {
-                            Text("Empieza un nuevo proyecto o seleccionalo desde la biblioteca", color = Color.Gray)
-                        }
-                    } else {
-                        // SECCIÓN EDITOR PRINCIPAL (Zoom afecta visualmente aquí)
-                        TimelineEditorSection(
-                            inPos = inPosition,
-                            outPos = outPosition,
-                            playPos = playheadPosition,
-                            zoom = zoomScale,
-                            onInChange = { viewModel.saveEditsToHistory(); inPosition = it },
-                            onOutChange = { viewModel.saveEditsToHistory(); outPosition = it },
-                            onPlayChange = { playheadPosition = it },
-                            onZoomChange = { zoomScale = it }
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // SECCIÓN DE TONO (Independiente)
-                        PitchControlSection(
-                            pitch = viewModel.pitchValue.value,
-                            onPitchChange = { viewModel.pitchValue.value = it }
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        FadeButtons()
-                    }
-                }
-            }
-        }
-    }
-}
+private val ChannelColors = listOf(
+    Color(0xFFBB86FC),
+    Color(0xFF80FFE5),
+    Color(0xFFFFB86C),
+    Color(0xFFFF7A87)
+)
 
 @Composable
-fun AudioCraftTopBar(title: String, artist: String, isPlaying: Boolean, onPlayToggle: () -> Unit, onResetRequested: () -> Unit, onUndoRequested: () -> Unit) {
-    var showOptions by remember { mutableStateOf(false) }
-
-    Surface(color = Color(0xFF1A1B2E), modifier = Modifier.fillMaxWidth().height(120.dp), shadowElevation = 8.dp) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text("AudioCraft", color = Color(0xFFBB86FC), fontWeight = FontWeight.Bold, fontSize = 22.sp)
-                    Text("$title · $artist", color = Color.Gray, fontSize = 12.sp)
-                }
-                Row {
-                    IconButton(onClick = onUndoRequested) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Deshacer", tint = LightText) }
-                    IconButton(onClick = { showOptions = true }) { Icon(Icons.Default.MoreVert, "Menú", tint = LightText) }
-
-                    DropdownMenu(expanded = showOptions, onDismissRequest = { showOptions = false }, modifier = Modifier.background(Color(0xFF2D2E45))) {
-                        DropdownMenuItem(
-                            text = { Text("Reiniciar Edición", color = Color.Red) },
-                            onClick = { showOptions = false; onResetRequested() },
-                            leadingIcon = { Icon(Icons.Default.Refresh, null, tint = Color.Red) }
-                        )
-                    }
-                }
-            }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = {}) { Icon(Icons.Default.SkipPrevious, null, tint = LightText) }
-
-                    // Botón Play/Stop dinámico del editor
-                    IconButton(onClick = onPlayToggle) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-                            contentDescription = "Play/Stop",
-                            tint = if (isPlaying) Color.Red else Color.Green
-                        )
-                    }
-
-                    IconButton(onClick = {}) { Icon(Icons.Default.FiberManualRecord, null, tint = Color.Red) }
-                }
-                Text("01:02:03", color = LightText, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(Color(0xFF2D2E45), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 4.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun TimelineEditorSection(
-    inPos: Float, outPos: Float, playPos: Float, zoom: Float,
-    onInChange: (Float) -> Unit, onOutChange: (Float) -> Unit, onPlayChange: (Float) -> Unit, onZoomChange: (Float) -> Unit
+fun TracksScreen(
+    navController: NavController,
+    viewModel: MusicViewModel,
+    project: ProjectViewModel
 ) {
-    Column(modifier = Modifier.fillMaxWidth().background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp)).padding(12.dp)) {
-        // Zoom exclusivo para la línea de tiempo
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.ZoomIn, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(8.dp))
-            Row(modifier = Modifier.background(Color(0xFF2D2E45), RoundedCornerShape(8.dp)).padding(2.dp)) {
-                listOf(0.5f, 1f, 2f).forEach { z ->
-                    Box(modifier = Modifier
-                        .background(if (zoom == z) Color(0xFF6200EE) else Color.Transparent, RoundedCornerShape(6.dp))
-                        .clickable { onZoomChange(z) }
-                        .padding(horizontal = 10.dp, vertical = 4.dp)) {
-                        Text("${if(z < 1) "0.5" else z.toInt()}x", color = LightText, fontSize = 10.sp)
-                    }
-                }
-            }
-            Spacer(Modifier.weight(1f))
-            Icon(Icons.Default.GridView, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
-            Text(" Snap", color = Color.Gray, fontSize = 10.sp)
+    val recorder = remember { Recorder() }
+
+    var section by rememberSaveable {
+        mutableStateOf(
+            if (project.tracks.isEmpty()) "piano" else "timeline"
+        )
+    }
+
+    var confirmNew by remember { mutableStateOf(false) }
+    val owner = LocalLifecycleOwner.current
+
+    DisposableEffect(owner) {
+        if (viewModel.isPlaying.value) {
+            viewModel.togglePlayPause()
         }
 
-        Spacer(Modifier.height(12.dp))
-
-        // WAVEFORM EDITOR
-        WaveformEditorPro(inPos, outPos, playPos, onInChange, onOutChange, onPlayChange)
-
-        Spacer(Modifier.height(12.dp))
-
-        // STRIP DE INFORMACIÓN
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("IN 0:31", color = Color.Green, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            Text("2:22 seleccionado", color = Color.Gray, fontSize = 11.sp)
-            Text("2:53 OUT", color = Color(0xFFFF9800), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // BOTONES ACCIÓN RÁPIDA
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { onInChange(0f); onOutChange(1f) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2D2E45))) {
-                Icon(Icons.Default.SelectAll, null, modifier = Modifier.size(14.dp))
-                Text(" Todo", fontSize = 10.sp)
-            }
-            Button(onClick = { onPlayChange(inPos) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2D2E45))) {
-                Icon(Icons.Default.SkipPrevious, null, modifier = Modifier.size(14.dp))
-                Text(" IN", fontSize = 10.sp)
-            }
-            Button(onClick = { onPlayChange(outPos) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2D2E45))) {
-                Icon(Icons.Default.SkipNext, null, modifier = Modifier.size(14.dp))
-                Text(" OUT", fontSize = 10.sp)
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                project.pause()
+                recorder.stopAsTrack()?.let(project::addRecording)
             }
         }
 
-        Spacer(Modifier.height(8.dp))
-        Button(onClick = {}, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBB86FC))) {
-            Icon(Icons.Default.ContentCut, null, modifier = Modifier.size(18.dp), tint = Color.Black)
-            Spacer(Modifier.width(8.dp))
-            Text("CORTAR REGIÓN", fontWeight = FontWeight.Bold, color = Color.Black)
+        owner.lifecycle.addObserver(observer)
+
+        onDispose {
+            owner.lifecycle.removeObserver(observer)
+            project.pause()
+            recorder.stopAsTrack()?.let(project::addRecording)
         }
     }
-}
 
-@Composable
-fun WaveformEditorPro(inPos: Float, outPos: Float, playPos: Float, onInChange: (Float) -> Unit, onOutChange: (Float) -> Unit, onPlayChange: (Float) -> Unit) {
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(140.dp).background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(4.dp))) {
-        val widthPx = constraints.maxWidth.toFloat()
+    val importer = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            project.importAudio(it)
+            section = "timeline"
+        }
+    }
 
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp, start = 4.dp, end = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            listOf("0:00", "0:28", "0:56", "1:23", "1:51", "2:19", "2:47", "3:14").forEach {
-                Text(it, color = Color.Gray, fontSize = 8.sp)
+    val exporter = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("audio/mpeg")
+    ) { uri ->
+        uri?.let(project::exportMp3)
+    }
+
+    val sections = listOf(
+        "piano" to R.string.piano,
+        "timeline" to R.string.timeline,
+        "mixer" to R.string.mixer,
+        "export" to R.string.export_audio
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0F1019))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            "PlaySymphony",
+            color = EditorAccent,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                enabled = !project.isBusy && !recorder.isRecording,
+                onClick = {
+                    if (project.tracks.isEmpty()) {
+                        project.newProject()
+                        section = "piano"
+                    } else {
+                        confirmNew = true
+                    }
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.new_project))
+            }
+
+            Button(
+                enabled = !project.isBusy && !recorder.isRecording,
+                onClick = {
+                    importer.launch(arrayOf("audio/*"))
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.add_track))
             }
         }
 
-        Canvas(modifier = Modifier.fillMaxSize().pointerInput(Unit) { detectDragGestures { change, _ -> onPlayChange(change.position.x / widthPx) } }) {
-            val barWidth = 3f
-            val spacing = 3f
-            val centerY = size.height / 2
-
-            for (i in 0 until (size.width / (barWidth + spacing)).toInt()) {
-                val x = i * (barWidth + spacing)
-                val h = (size.height * 0.2f) + (i % 5) * 15f
-                val isSelected = (x / size.width) in inPos..outPos
-
-                drawLine(
-                    color = if (isSelected) Color(0xFFFF9800) else Color.DarkGray, // Naranja Pro
-                    start = Offset(x, centerY - h/2),
-                    end = Offset(x, centerY + h/2),
-                    strokeWidth = barWidth
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                enabled = project.tracks.isNotEmpty() &&
+                        !project.isBusy &&
+                        !recorder.isRecording,
+                onClick = project::togglePlayback
+            ) {
+                Text(
+                    stringResource(
+                        if (project.isPlaying || project.isPreparing) {
+                            R.string.pause
+                        } else {
+                            R.string.play
+                        }
+                    )
                 )
             }
 
-            drawRect(Color.Black.copy(alpha = 0.5f), size = Size(inPos * size.width, size.height))
-            drawRect(Color.Black.copy(alpha = 0.5f), topLeft = Offset(outPos * size.width, 0f), size = Size((1f - outPos) * size.width, size.height))
-        }
-
-        // HANDLE IN
-        Box(modifier = Modifier.offset(x = (maxWidth * inPos) - 15.dp).width(30.dp).fillMaxHeight()
-            .pointerInput(Unit) { detectDragGestures { change, _ -> onInChange((change.position.x / widthPx) + inPos) } }
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Surface(color = Color.Green, shape = RoundedCornerShape(4.dp)) {
-                    Text("IN", color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
-                }
-                Spacer(modifier = Modifier.width(3.dp).fillMaxHeight().background(Color.Green))
+            OutlinedButton(
+                onClick = { project.seekTo(0) }
+            ) {
+                Text(stringResource(R.string.to_start))
             }
-        }
 
-        // HANDLE OUT
-        Box(modifier = Modifier.offset(x = (maxWidth * outPos) - 15.dp).width(30.dp).fillMaxHeight()
-            .pointerInput(Unit) { detectDragGestures { change, _ -> onOutChange((change.position.x / widthPx) + outPos) } }
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Surface(color = Color(0xFFFF9800), shape = RoundedCornerShape(4.dp)) {
-                    Text("OUT", color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
-                }
-                Spacer(modifier = Modifier.width(3.dp).fillMaxHeight().background(Color(0xFFFF9800)))
-            }
-        }
-
-        // PLAYHEAD
-        Box(modifier = Modifier.offset(x = (maxWidth * playPos) - 1.5.dp).width(3.dp).fillMaxHeight().background(Color.Red)) {
-            Box(Modifier.size(10.dp).background(Color.Red, RoundedCornerShape(2.dp)).align(Alignment.TopCenter).offset(y = 20.dp))
-        }
-    }
-}
-
-@Composable
-fun PitchControlSection(pitch: Float, onPitchChange: (Float) -> Unit) {
-    // Colores dinámicos: Graves (Cian/Verde) - Neutral (Morado) - Agudos (Naranja)
-    val trackColor = when {
-        pitch < -2f -> Color(0xFF03DAC6)
-        pitch > 2f -> Color(0xFFFF9800)
-        else -> Color(0xFFBB86FC)
-    }
-
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Tune, null, tint = Color.Gray, modifier = Modifier.size(18.dp))
             Text(
-                text = " Tono: ${pitch.toInt()} semitonos",
-                color = LightText,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                text = if (pitch > 0) "AGUDO" else if (pitch < 0) "GRAVE" else "ORIGINAL",
-                color = trackColor,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black
+                "${clock(project.positionMs)} / ${clock(project.durationMs)}",
+                color = Color.White,
+                style = MaterialTheme.typography.labelSmall
             )
         }
+
+        val seekLabel = stringResource(R.string.seek)
 
         Slider(
-            value = pitch,
-            onValueChange = onPitchChange,
-            valueRange = -12f..12f,
-            steps = 24,
-            colors = SliderDefaults.colors(
-                thumbColor = trackColor,
-                activeTrackColor = trackColor,
-                inactiveTrackColor = Color.Gray.copy(alpha = 0.3f)
+            value = project.positionMs.toFloat().coerceIn(
+                0f,
+                project.durationMs.toFloat().coerceAtLeast(1f)
             ),
-            modifier = Modifier.padding(top = 4.dp)
+            valueRange = 0f..project.durationMs
+                .toFloat()
+                .coerceAtLeast(1f),
+            onValueChange = {
+                project.seekTo(it.toLong())
+            },
+            enabled = project.tracks.isNotEmpty() && !project.isBusy,
+            modifier = Modifier.semantics {
+                contentDescription = seekLabel
+            }
         )
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("-12 (Grave)", color = Color.Gray, fontSize = 9.sp)
-            Text("0", color = Color.Gray, fontSize = 9.sp)
-            Text("+12 (Agudo)", color = Color.Gray, fontSize = 9.sp)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            sections.forEach { (id, label) ->
+                FilterChip(
+                    selected = section == id,
+                    enabled = !recorder.isRecording,
+                    onClick = {
+                        project.pause()
+                        section = id
+                    },
+                    label = {
+                        Text(stringResource(label))
+                    }
+                )
+            }
         }
+
+        if (project.isBusy || project.isPreparing) {
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+
+            Text(
+                stringResource(R.string.processing_audio),
+                color = Color.LightGray
+            )
+        }
+
+        project.message?.let { resource ->
+            Text(
+                stringResource(resource),
+                color = EditorAccent
+            )
+
+            TextButton(onClick = project::dismissMessage) {
+                Text(stringResource(R.string.dismiss))
+            }
+        }
+
+        Box(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            if (section == "piano") {
+                Column(Modifier.fillMaxSize()) {
+                    Button(
+                        enabled = !project.isBusy,
+                        onClick = {
+                            project.pause()
+
+                            if (recorder.isRecording) {
+                                recorder.stopAsTrack()
+                                    ?.let(project::addRecording)
+
+                                section = "timeline"
+                            } else {
+                                recorder.start()
+                            }
+                        }
+                    ) {
+                        Text(
+                            stringResource(
+                                if (recorder.isRecording) {
+                                    R.string.stop_recording
+                                } else {
+                                    R.string.record
+                                }
+                            )
+                        )
+                    }
+
+                    PianoAdaptable(
+                        recorder = recorder,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    )
+                }
+            } else {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    when (section) {
+                        "timeline" -> {
+                            Text(
+                                stringResource(R.string.timeline_help),
+                                color = Color.LightGray
+                            )
+
+                            Row(
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    enabled = !project.isBusy,
+                                    onClick = project::undo
+                                ) {
+                                    Text(stringResource(R.string.undo))
+                                }
+
+                                viewModel.currentSong.value?.let { song ->
+                                    OutlinedButton(
+                                        enabled = !project.isBusy,
+                                        onClick = {
+                                            val uri = if (
+                                                song.filePath.contains("://")
+                                            ) {
+                                                Uri.parse(song.filePath)
+                                            } else {
+                                                Uri.fromFile(File(song.filePath))
+                                            }
+
+                                            project.importAudio(uri)
+                                        }
+                                    ) {
+                                        Text(
+                                            stringResource(
+                                                R.string.add_current_song
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (project.tracks.isEmpty()) {
+                                EmptyProject()
+                            } else {
+                                Timeline(project)
+                            }
+                        }
+
+                        "mixer" -> {
+                            if (project.tracks.isEmpty()) {
+                                EmptyProject()
+                            }
+
+                            MixerSection(
+                                tracks = project.tracks,
+                                master = project.master,
+                                enabled = !project.isBusy,
+                                onTrackChange = project::updateTrack,
+                                onMasterChange = project::updateMasterVolume,
+                                onEditStart = project::rememberEdit
+                            )
+                        }
+
+                        "export" -> {
+                            Text(
+                                stringResource(R.string.export_description),
+                                color = Color.White
+                            )
+
+                            Button(
+                                enabled = project.tracks.isNotEmpty() &&
+                                        !project.isBusy,
+                                onClick = {
+                                    exporter.launch("PlaySymphony.mp3")
+                                }
+                            ) {
+                                Text(stringResource(R.string.save_mp3))
+                            }
+
+                            if (project.tracks.isEmpty()) {
+                                EmptyProject()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (confirmNew) {
+        AlertDialog(
+            onDismissRequest = {
+                confirmNew = false
+            },
+            title = {
+                Text(stringResource(R.string.new_project))
+            },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.new_project_confirmation
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        project.newProject()
+                        section = "piano"
+                        confirmNew = false
+                    }
+                ) {
+                    Text(stringResource(R.string.create))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { confirmNew = false }
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 }
 
 @Composable
-fun FadeButtons() {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        OutlinedButton(onClick = {}, modifier = Modifier.weight(1f).padding(4.dp), border = BorderStroke(1.dp, Color(0xFFBB86FC))) {
-            Icon(Icons.AutoMirrored.Filled.TrendingUp, null, modifier = Modifier.size(16.dp))
-            Text(" Fade In", color = LightText)
-        }
-        OutlinedButton(onClick = {}, modifier = Modifier.weight(1f).padding(4.dp), border = BorderStroke(1.dp, Color(0xFFBB86FC))) {
-            Icon(Icons.AutoMirrored.Filled.TrendingDown, null, modifier = Modifier.size(16.dp))
-            Text(" Fade Out", color = LightText)
-        }
-    }
+private fun EmptyProject() {
+    Text(
+        stringResource(R.string.empty_project),
+        color = Color.LightGray
+    )
 }
 
 @Composable
-fun AudioCraftSidebar(
-    selectedSection: String,
-    onSectionSelected: (String) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .width(80.dp)
-            .background(Color(0xFF121212))
-            .padding(vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+private fun Timeline(project: ProjectViewModel) {
+    var spanMs by rememberSaveable {
+        mutableLongStateOf(60000L)
+    }
+
+    LaunchedEffect(project.tracks.map { it.id }) {
+        spanMs = maxOf(
+            spanMs,
+            project.durationMs + 30000
+        )
+    }
+
+    OutlinedButton(
+        enabled = spanMs < ProjectViewModel.MAX_START_MS,
+        onClick = {
+            spanMs = (spanMs + 60000)
+                .coerceAtMost(ProjectViewModel.MAX_START_MS)
+        }
     ) {
-        SidebarItem(
-            icon = Icons.AutoMirrored.Filled.QueueMusic,
-            label = "Samples",
-            isSelected = selectedSection == "Samples",
-            onClick = { onSectionSelected("Samples") }
+        Text(stringResource(R.string.extend_timeline))
+    }
+
+    val scroll = rememberScrollState()
+
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val timelineWidth = maxOf(
+            maxWidth,
+            (spanMs / 1000f * 24).dp.coerceAtMost(20000.dp)
         )
 
-        SidebarItem(
-            icon = Icons.Default.Timeline,
-            label = "Timeline",
-            isSelected = selectedSection == "Timeline",
-            onClick = { onSectionSelected("Timeline") }
-        )
+        val pixelsPerMs = with(LocalDensity.current) {
+            timelineWidth.toPx()
+        } / spanMs
 
-        SidebarItem(
-            icon = Icons.Default.GraphicEq,
-            label = "Tracks",
-            isSelected = selectedSection == "Tracks",
-            onClick = { onSectionSelected("Tracks") }
-        )
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(scroll)
+        ) {
+            Column(
+                Modifier.width(timelineWidth),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    (0..8).forEach { step ->
+                        Text(
+                            clock(spanMs * step / 8),
+                            color = Color.Gray,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
 
-        SidebarItem(
-            icon = Icons.Default.Tune,
-            label = "Mixer",
-            isSelected = selectedSection == "Mixer",
-            onClick = { onSectionSelected("Mixer") }
-        )
+                project.tracks.forEachIndexed { index, track ->
+                    key(track.id) {
+                        TimelineClip(
+                            track,
+                            index,
+                            project,
+                            timelineWidth,
+                            spanMs,
+                            pixelsPerMs
+                        )
+                    }
+                }
+            }
+        }
+    }
 
-        SidebarItem(
-            icon = Icons.Default.FileUpload,
-            label = "Export",
-            isSelected = selectedSection == "Export",
-            onClick = { onSectionSelected("Export") }
-        )
+    project.tracks.forEachIndexed { index, track ->
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                track.name,
+                color = Color.White,
+                maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+
+            TextButton(
+                enabled = index > 0 && !project.isBusy,
+                onClick = {
+                    project.reorder(track.id, -1)
+                }
+            ) {
+                Text("↑")
+            }
+
+            TextButton(
+                enabled = index < project.tracks.lastIndex &&
+                        !project.isBusy,
+                onClick = {
+                    project.reorder(track.id, 1)
+                }
+            ) {
+                Text("↓")
+            }
+
+            TextButton(
+                enabled = !project.isBusy,
+                onClick = {
+                    project.removeTrack(track.id)
+                }
+            ) {
+                Text(stringResource(R.string.remove))
+            }
+        }
     }
 }
 
 @Composable
-fun SidebarItem(
-    icon: ImageVector,
-    label: String,
-    isSelected: Boolean = false,
-    onClick: () -> Unit
+private fun TimelineClip(
+    track: ProjectTrack,
+    index: Int,
+    project: ProjectViewModel,
+    width: androidx.compose.ui.unit.Dp,
+    spanMs: Long,
+    pixelsPerMs: Float
 ) {
-    val itemColor = if (isSelected) {
-        Color(0xFFBB86FC)
-    } else {
-        Color.Gray
-    }
+    val latest by rememberUpdatedState(track)
+    val enabled by rememberUpdatedState(!project.isBusy)
+    val color = ChannelColors[index % ChannelColors.size]
 
-    Column(
-        modifier = Modifier
+    Box(
+        Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .height(72.dp)
+            .background(EditorCard, RoundedCornerShape(6.dp))
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = itemColor,
-            modifier = Modifier.size(28.dp)
-        )
+        Box(
+            Modifier
+                .offset(
+                    x = width * (track.startMs.toFloat() / spanMs)
+                )
+                .width(
+                    (
+                            width * (track.durationMs.toFloat() / spanMs)
+                            ).coerceAtLeast(48.dp)
+                )
+                .fillMaxHeight()
+                .background(
+                    color.copy(alpha = 0.35f),
+                    RoundedCornerShape(6.dp)
+                )
+                .border(
+                    1.dp,
+                    color,
+                    RoundedCornerShape(6.dp)
+                )
+                .pointerInput(track.id, pixelsPerMs, spanMs) {
+                    var start = 0L
+                    var delta = 0f
 
-        Text(
-            text = label,
-            color = itemColor,
-            fontSize = 10.sp
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = {
+                            if (enabled) {
+                                project.pause()
+                                project.rememberEdit()
+                                start = latest.startMs
+                                delta = 0f
+                            }
+                        },
+                        onDrag = { change, amount ->
+                            if (enabled) {
+                                change.consume()
+                                delta += amount.x
+
+                                val next = (
+                                        start +
+                                                (delta / pixelsPerMs).roundToLong()
+                                        ).coerceIn(
+                                        0L,
+                                        (spanMs - latest.durationMs)
+                                            .coerceAtLeast(0)
+                                    )
+
+                                project.moveTrack(latest.id, next)
+                            }
+                        }
+                    )
+                }
+                .padding(8.dp)
+        ) {
+            Column {
+                Text(
+                    track.name,
+                    color = Color.White,
+                    maxLines = 1
+                )
+
+                Text(
+                    clock(track.startMs),
+                    color = Color.LightGray,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
+
+        Box(
+            Modifier
+                .offset(
+                    x = width * (project.positionMs.toFloat() / spanMs)
+                )
+                .width(2.dp)
+                .fillMaxHeight()
+                .background(Color.Red)
         )
     }
 }
+
+private fun clock(ms: Long): String = String.format(
+    Locale.ROOT,
+    "%d:%02d.%01d",
+    ms / 60000,
+    ms / 1000 % 60,
+    ms / 100 % 10
+)

@@ -1,5 +1,6 @@
 package com.example.playsymphonyapp.music
-
+import androidx.compose.ui.res.stringResource
+import com.example.playsymphonyapp.R
 import android.content.ContentUris
 import android.content.Context
 import android.provider.MediaStore
@@ -52,14 +53,18 @@ class LocalMusicScanner {
 
                 val title = cursor.getString(titleColumn)
                     ?.takeIf { it.isNotBlank() }
-                    ?: "Título desconocido"
+                    ?: context.getString(
+                        com.example.playsymphonyapp.R.string.unknown_title
+                    )
 
                 val artist = cursor.getString(artistColumn)
                     ?.takeIf {
                         it.isNotBlank() &&
                                 it != "<unknown>"
                     }
-                    ?: "Artista desconocido"
+                    ?: context.getString(
+                        com.example.playsymphonyapp.R.string.unknown_artist
+                    )
 
                 val durationMs = cursor.getLong(durationColumn)
 
