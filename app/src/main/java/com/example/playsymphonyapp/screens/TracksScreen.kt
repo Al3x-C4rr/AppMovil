@@ -36,6 +36,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
+import com.example.playsymphonyapp.components.PianoAdaptable
+import com.example.playsymphonyapp.components.ExportSection
+import com.example.playsymphonyapp.components.Recorder
 import com.example.playsymphonyapp.songDatabase.SongDatabase
 import com.example.playsymphonyapp.ui.theme.DarkBackground
 import com.example.playsymphonyapp.ui.theme.LightText
@@ -43,7 +46,6 @@ import com.example.playsymphonyapp.viewmodels.MusicViewModel
 
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import com.example.playsymphonyapp.components.PianoAdaptable
 
 
 @Composable
@@ -53,6 +55,7 @@ fun TracksScreen(navController: NavController, viewModel: MusicViewModel) {
     val song by viewModel.currentSong
     val isPlaying by viewModel.isPlaying
     val context = LocalContext.current
+    val recorder = remember { Recorder() }
     val database = remember { Room.databaseBuilder(context, SongDatabase::class.java, "song_database").build() }
 
     // Estado del scroll para el contenido del editor
@@ -114,10 +117,27 @@ fun TracksScreen(navController: NavController, viewModel: MusicViewModel) {
 
                     if (selectedSection == "Samples") {
                         PianoAdaptable(
+                            recorder = recorder,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
                         )
+                    } else if (selectedSection == "Export") {
+                        if (song == null) {
+                            Text(
+                                text = "Selecciona una canción de la biblioteca para exportar",
+                                color = Color.Gray,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        } else {
+                            ExportSection(
+                                modifier = Modifier.fillMaxWidth(),
+                                song = song,
+                                inPosition = inPosition,
+                                outPosition = outPosition,
+                                pitchSemitones = viewModel.pitchValue.value
+                            )
+                        }
                     } else if (selectedSection != "Tracks") {
                         Text(
                             text = when (selectedSection) {

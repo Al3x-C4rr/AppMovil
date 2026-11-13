@@ -73,4 +73,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation("androidx.appcompat:appcompat:1.8.0")
+    implementation("androidx.media3:media3-transformer:1.8.1")
+    implementation("androidx.media3:media3-common:1.8.1")
+    implementation("androidx.media3:media3-effect:1.8.1")
 }
