@@ -8,6 +8,9 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -64,6 +67,7 @@ fun TracksScreen(
     }
 
     var confirmNew by remember { mutableStateOf(false) }
+    var isSidebarVisible by rememberSaveable { mutableStateOf(true) }
     val owner = LocalLifecycleOwner.current
 
     DisposableEffect(owner) {
@@ -107,26 +111,28 @@ fun TracksScreen(
             .fillMaxSize()
             .background(Color(0xFF0F1019))
     ) {
-        AudioCraftSidebar(
-            selectedSection = when (section) {
-                "piano" -> "Samples"
-                "timeline" -> "Timeline"
-                "mixer" -> "Mixer"
-                "export" -> "Export"
-                else -> "Samples"
-            },
-            onSectionSelected = { selected ->
-                project.pause()
-                section = when (selected) {
-                    "Samples" -> "piano"
-                    "Timeline" -> "timeline"
-                    "Tracks" -> "timeline"
-                    "Mixer" -> "mixer"
-                    "Export" -> "export"
-                    else -> selected.lowercase()
+        if (isSidebarVisible) {
+            AudioCraftSidebar(
+                selectedSection = when (section) {
+                    "piano" -> "Samples"
+                    "timeline" -> "Timeline"
+                    "mixer" -> "Mixer"
+                    "export" -> "Export"
+                    else -> "Samples"
+                },
+                onSectionSelected = { selected ->
+                    project.pause()
+                    section = when (selected) {
+                        "Samples" -> "piano"
+                        "Timeline" -> "timeline"
+                        "Tracks" -> "timeline"
+                        "Mixer" -> "mixer"
+                        "Export" -> "export"
+                        else -> selected.lowercase()
+                    }
                 }
-            }
-        )
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -135,12 +141,25 @@ fun TracksScreen(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                "PlaySymphony",
-                color = EditorAccent,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IconButton(onClick = { isSidebarVisible = !isSidebarVisible }) {
+                    Icon(
+                        imageVector = if (isSidebarVisible) Icons.Default.Close else Icons.Default.Menu,
+                        contentDescription = "Menú lateral",
+                        tint = Color.White
+                    )
+                }
+
+                Text(
+                    "PlaySymphony",
+                    color = EditorAccent,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
 
             Row(
                 Modifier.fillMaxWidth(),
