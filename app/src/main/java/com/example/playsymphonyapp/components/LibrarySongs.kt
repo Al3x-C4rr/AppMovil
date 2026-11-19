@@ -1,6 +1,5 @@
 package com.example.playsymphonyapp.components
-import androidx.compose.ui.res.stringResource
-import com.example.playsymphonyapp.R
+
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -19,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,6 +27,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.room.Room
+import com.example.playsymphonyapp.R
 import com.example.playsymphonyapp.music.LocalMusicScanner
 import com.example.playsymphonyapp.songDatabase.Song
 import com.example.playsymphonyapp.songDatabase.SongDatabase
@@ -37,6 +38,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun LibrarySongs(
     viewModel: MusicViewModel,
+    searchQuery: String = "",
     onSongsCounted: (Int) -> Unit = {},
     onSongSelected: () -> Unit = {}
 ) {
@@ -137,10 +139,25 @@ fun LibrarySongs(
     }
 
     /*
-     * Informa cuántas canciones hay en la biblioteca.
+     * Filtra la lista según la búsqueda del usuario (título o artista).
      */
-    LaunchedEffect(songs.size) {
-        onSongsCounted(songs.size)
+    val filteredSongs = remember(songs, searchQuery) {
+        if (searchQuery.isBlank()) {
+            songs
+        } else {
+            val query = searchQuery.trim().lowercase()
+            songs.filter { song ->
+                song.title.lowercase().contains(query) ||
+                        song.artist.lowercase().contains(query)
+            }
+        }
+    }
+
+    /*
+     * Informa cuántas canciones hay en la biblioteca filtrada.
+     */
+    LaunchedEffect(filteredSongs.size) {
+        onSongsCounted(filteredSongs.size)
     }
 
     LazyColumn(
@@ -149,7 +166,7 @@ fun LibrarySongs(
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         items(
-            items = songs,
+            items = filteredSongs,
             key = { song -> song.id }
         ) { song ->
 
@@ -250,7 +267,7 @@ fun SongCard(
 
                 if (song.isEdited) {
                     Text(
-                        text=stringResource(R.string.edited),
+                        text = stringResource(R.string.edited),
                         color = AccentColor,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold

@@ -1,6 +1,7 @@
 package com.example.playsymphonyapp.screens
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
@@ -14,17 +15,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.example.playsymphonyapp.R
+import com.example.playsymphonyapp.components.AudioCraftSidebar
 import com.example.playsymphonyapp.components.MixerSection
 import com.example.playsymphonyapp.components.PianoAdaptable
 import com.example.playsymphonyapp.components.Recorder
@@ -98,281 +102,280 @@ fun TracksScreen(
         uri?.let(project::exportMp3)
     }
 
-    val sections = listOf(
-        "piano" to R.string.piano,
-        "timeline" to R.string.timeline,
-        "mixer" to R.string.mixer,
-        "export" to R.string.export_audio
-    )
-
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0F1019))
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            "PlaySymphony",
-            color = EditorAccent,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedButton(
-                enabled = !project.isBusy && !recorder.isRecording,
-                onClick = {
-                    if (project.tracks.isEmpty()) {
-                        project.newProject()
-                        section = "piano"
-                    } else {
-                        confirmNew = true
-                    }
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(stringResource(R.string.new_project))
-            }
-
-            Button(
-                enabled = !project.isBusy && !recorder.isRecording,
-                onClick = {
-                    importer.launch(arrayOf("audio/*"))
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(stringResource(R.string.add_track))
-            }
-        }
-
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                enabled = project.tracks.isNotEmpty() &&
-                        !project.isBusy &&
-                        !recorder.isRecording,
-                onClick = project::togglePlayback
-            ) {
-                Text(
-                    stringResource(
-                        if (project.isPlaying || project.isPreparing) {
-                            R.string.pause
-                        } else {
-                            R.string.play
-                        }
-                    )
-                )
-            }
-
-            OutlinedButton(
-                onClick = { project.seekTo(0) }
-            ) {
-                Text(stringResource(R.string.to_start))
-            }
-
-            Text(
-                "${clock(project.positionMs)} / ${clock(project.durationMs)}",
-                color = Color.White,
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
-
-        val seekLabel = stringResource(R.string.seek)
-
-        Slider(
-            value = project.positionMs.toFloat().coerceIn(
-                0f,
-                project.durationMs.toFloat().coerceAtLeast(1f)
-            ),
-            valueRange = 0f..project.durationMs
-                .toFloat()
-                .coerceAtLeast(1f),
-            onValueChange = {
-                project.seekTo(it.toLong())
+        AudioCraftSidebar(
+            selectedSection = when (section) {
+                "piano" -> "Samples"
+                "timeline" -> "Timeline"
+                "mixer" -> "Mixer"
+                "export" -> "Export"
+                else -> "Samples"
             },
-            enabled = project.tracks.isNotEmpty() && !project.isBusy,
-            modifier = Modifier.semantics {
-                contentDescription = seekLabel
+            onSectionSelected = { selected ->
+                project.pause()
+                section = when (selected) {
+                    "Samples" -> "piano"
+                    "Timeline" -> "timeline"
+                    "Tracks" -> "timeline"
+                    "Mixer" -> "mixer"
+                    "Export" -> "export"
+                    else -> selected.lowercase()
+                }
             }
         )
 
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            sections.forEach { (id, label) ->
-                FilterChip(
-                    selected = section == id,
-                    enabled = !recorder.isRecording,
-                    onClick = {
-                        project.pause()
-                        section = id
-                    },
-                    label = {
-                        Text(stringResource(label))
-                    }
-                )
-            }
-        }
-
-        if (project.isBusy || project.isPreparing) {
-            LinearProgressIndicator(Modifier.fillMaxWidth())
-
-            Text(
-                stringResource(R.string.processing_audio),
-                color = Color.LightGray
-            )
-        }
-
-        project.message?.let { resource ->
-            Text(
-                stringResource(resource),
-                color = EditorAccent
-            )
-
-            TextButton(onClick = project::dismissMessage) {
-                Text(stringResource(R.string.dismiss))
-            }
-        }
-
-        Box(
-            Modifier
+        Column(
+            modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (section == "piano") {
-                Column(Modifier.fillMaxSize()) {
-                    Button(
-                        enabled = !project.isBusy,
-                        onClick = {
-                            project.pause()
+            Text(
+                "PlaySymphony",
+                color = EditorAccent,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
 
-                            if (recorder.isRecording) {
-                                recorder.stopAsTrack()
-                                    ?.let(project::addRecording)
-
-                                section = "timeline"
-                            } else {
-                                recorder.start()
-                            }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    enabled = !project.isBusy && !recorder.isRecording,
+                    onClick = {
+                        if (project.tracks.isEmpty()) {
+                            project.newProject()
+                            section = "piano"
+                        } else {
+                            confirmNew = true
                         }
-                    ) {
-                        Text(
-                            stringResource(
-                                if (recorder.isRecording) {
-                                    R.string.stop_recording
-                                } else {
-                                    R.string.record
-                                }
-                            )
-                        )
-                    }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.new_project))
+                }
 
-                    PianoAdaptable(
-                        recorder = recorder,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
+                Button(
+                    enabled = !project.isBusy && !recorder.isRecording,
+                    onClick = {
+                        importer.launch(arrayOf("audio/*"))
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.add_track))
+                }
+            }
+
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    enabled = project.tracks.isNotEmpty() &&
+                            !project.isBusy &&
+                            !recorder.isRecording,
+                    onClick = project::togglePlayback
+                ) {
+                    Text(
+                        stringResource(
+                            if (project.isPlaying || project.isPreparing) {
+                                R.string.pause
+                            } else {
+                                R.string.play
+                            }
+                        )
                     )
                 }
-            } else {
-                Column(
-                    Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+
+                OutlinedButton(
+                    onClick = { project.seekTo(0) }
                 ) {
-                    when (section) {
-                        "timeline" -> {
-                            Text(
-                                stringResource(R.string.timeline_help),
-                                color = Color.LightGray
-                            )
+                    Text(stringResource(R.string.to_start))
+                }
 
-                            Row(
-                                horizontalArrangement =
-                                    Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedButton(
-                                    enabled = !project.isBusy,
-                                    onClick = project::undo
-                                ) {
-                                    Text(stringResource(R.string.undo))
+                Text(
+                    "${clock(project.positionMs)} / ${clock(project.durationMs)}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+
+            val seekLabel = stringResource(R.string.seek)
+
+            Slider(
+                value = project.positionMs.toFloat().coerceIn(
+                    0f,
+                    project.durationMs.toFloat().coerceAtLeast(1f)
+                ),
+                valueRange = 0f..project.durationMs
+                    .toFloat()
+                    .coerceAtLeast(1f),
+                onValueChange = {
+                    project.seekTo(it.toLong())
+                },
+                enabled = project.tracks.isNotEmpty() && !project.isBusy,
+                modifier = Modifier.semantics {
+                    contentDescription = seekLabel
+                }
+            )
+
+            if (project.isBusy || project.isPreparing) {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+
+                Text(
+                    stringResource(R.string.processing_audio),
+                    color = Color.LightGray
+                )
+            }
+
+            project.message?.let { resource ->
+                Text(
+                    stringResource(resource),
+                    color = EditorAccent
+                )
+
+                TextButton(onClick = project::dismissMessage) {
+                    Text(stringResource(R.string.dismiss))
+                }
+            }
+
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                if (section == "piano") {
+                    Column(Modifier.fillMaxSize()) {
+                        Button(
+                            enabled = !project.isBusy,
+                            onClick = {
+                                project.pause()
+
+                                if (recorder.isRecording) {
+                                    recorder.stopAsTrack()
+                                        ?.let(project::addRecording)
+
+                                    section = "timeline"
+                                } else {
+                                    recorder.start()
                                 }
+                            }
+                        ) {
+                            Text(
+                                stringResource(
+                                    if (recorder.isRecording) {
+                                        R.string.stop_recording
+                                    } else {
+                                        R.string.record
+                                    }
+                                )
+                            )
+                        }
 
-                                viewModel.currentSong.value?.let { song ->
+                        PianoAdaptable(
+                            recorder = recorder,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        )
+                    }
+                } else {
+                    Column(
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        when (section) {
+                            "timeline" -> {
+                                Text(
+                                    stringResource(R.string.timeline_help),
+                                    color = Color.LightGray
+                                )
+
+                                Row(
+                                    horizontalArrangement =
+                                        Arrangement.spacedBy(8.dp)
+                                ) {
                                     OutlinedButton(
                                         enabled = !project.isBusy,
-                                        onClick = {
-                                            val uri = if (
-                                                song.filePath.contains("://")
-                                            ) {
-                                                Uri.parse(song.filePath)
-                                            } else {
-                                                Uri.fromFile(File(song.filePath))
-                                            }
-
-                                            project.importAudio(uri)
-                                        }
+                                        onClick = project::undo
                                     ) {
-                                        Text(
-                                            stringResource(
-                                                R.string.add_current_song
+                                        Text(stringResource(R.string.undo))
+                                    }
+
+                                    viewModel.currentSong.value?.let { song ->
+                                        OutlinedButton(
+                                            enabled = !project.isBusy,
+                                            onClick = {
+                                                val uri = if (
+                                                    song.filePath.contains("://")
+                                                ) {
+                                                    Uri.parse(song.filePath)
+                                                } else {
+                                                    Uri.fromFile(File(song.filePath))
+                                                }
+
+                                                project.importAudio(uri)
+                                            }
+                                        ) {
+                                            Text(
+                                                stringResource(
+                                                    R.string.add_current_song
+                                                )
                                             )
-                                        )
+                                        }
                                     }
                                 }
-                            }
 
-                            if (project.tracks.isEmpty()) {
-                                EmptyProject()
-                            } else {
-                                Timeline(project)
-                            }
-                        }
-
-                        "mixer" -> {
-                            if (project.tracks.isEmpty()) {
-                                EmptyProject()
-                            }
-
-                            MixerSection(
-                                tracks = project.tracks,
-                                master = project.master,
-                                enabled = !project.isBusy,
-                                onTrackChange = project::updateTrack,
-                                onMasterChange = project::updateMasterVolume,
-                                onEditStart = project::rememberEdit
-                            )
-                        }
-
-                        "export" -> {
-                            Text(
-                                stringResource(R.string.export_description),
-                                color = Color.White
-                            )
-
-                            Button(
-                                enabled = project.tracks.isNotEmpty() &&
-                                        !project.isBusy,
-                                onClick = {
-                                    exporter.launch("PlaySymphony.mp3")
+                                if (project.tracks.isEmpty()) {
+                                    EmptyProject()
+                                } else {
+                                    Timeline(project)
                                 }
-                            ) {
-                                Text(stringResource(R.string.save_mp3))
                             }
 
-                            if (project.tracks.isEmpty()) {
-                                EmptyProject()
+                            "mixer" -> {
+                                if (project.tracks.isEmpty()) {
+                                    EmptyProject()
+                                }
+
+                                MixerSection(
+                                    tracks = project.tracks,
+                                    master = project.master,
+                                    enabled = !project.isBusy,
+                                    onTrackChange = project::updateTrack,
+                                    onMasterChange = project::updateMasterVolume,
+                                    onEditStart = project::rememberEdit
+                                )
+                            }
+
+                            "export" -> {
+                                Text(
+                                    stringResource(R.string.export_description),
+                                    color = Color.White
+                                )
+
+                                Button(
+                                    enabled = project.tracks.isNotEmpty() &&
+                                            !project.isBusy,
+                                    onClick = {
+                                        exporter.launch("PlaySymphony.mp3")
+                                    }
+                                ) {
+                                    Text(stringResource(R.string.save_mp3))
+                                }
+
+                                if (project.tracks.isEmpty()) {
+                                    EmptyProject()
+                                }
                             }
                         }
                     }
@@ -428,6 +431,8 @@ private fun EmptyProject() {
 
 @Composable
 private fun Timeline(project: ProjectViewModel) {
+    val context = LocalContext.current
+
     var spanMs by rememberSaveable {
         mutableLongStateOf(60000L)
     }
@@ -444,6 +449,12 @@ private fun Timeline(project: ProjectViewModel) {
         onClick = {
             spanMs = (spanMs + 60000)
                 .coerceAtMost(ProjectViewModel.MAX_START_MS)
+            val totalMinutes = spanMs / 60000
+            Toast.makeText(
+                context,
+                "Línea de tiempo extendida a $totalMinutes min",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     ) {
         Text(stringResource(R.string.extend_timeline))
@@ -547,7 +558,7 @@ private fun TimelineClip(
     track: ProjectTrack,
     index: Int,
     project: ProjectViewModel,
-    width: androidx.compose.ui.unit.Dp,
+    width: Dp,
     spanMs: Long,
     pixelsPerMs: Float
 ) {

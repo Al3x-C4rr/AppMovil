@@ -1,19 +1,20 @@
 // Archivo: LibraryScreen.kt
-// Pantalla de biblioteca con soporte para reproducción real y ViewModel.
+// Pantalla de biblioteca con soporte para reproducción real, ViewModel y búsqueda funcional.
 
 package com.example.playsymphonyapp.screens
-import androidx.compose.ui.res.stringResource
-import com.example.playsymphonyapp.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.playsymphonyapp.R
 import com.example.playsymphonyapp.components.LibraryHeader
 import com.example.playsymphonyapp.components.LibrarySongs
 import com.example.playsymphonyapp.ui.theme.AccentColor
@@ -23,6 +24,7 @@ import com.example.playsymphonyapp.viewmodels.MusicViewModel
 @Composable
 fun LibraryScreen(navController: NavController, viewModel: MusicViewModel) {
     var songCount by remember { mutableIntStateOf(0) }
+    var searchQuery by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -30,8 +32,12 @@ fun LibraryScreen(navController: NavController, viewModel: MusicViewModel) {
             .fillMaxWidth()
             .background(DarkBackground),
     ) {
-        LibraryHeader(navController = navController)
-        
+        LibraryHeader(
+            navController = navController,
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchQuery = it }
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -47,9 +53,9 @@ fun LibraryScreen(navController: NavController, viewModel: MusicViewModel) {
                 modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp)
             )
 
-            // Pasamos el viewModel y navegamos al reproductor al seleccionar una canción
             LibrarySongs(
                 viewModel = viewModel,
+                searchQuery = searchQuery,
                 onSongsCounted = { songCount = it },
                 onSongSelected = {
                     navController.navigate("player") {

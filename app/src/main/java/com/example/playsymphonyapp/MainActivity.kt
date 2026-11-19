@@ -20,7 +20,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.playsymphonyapp.components.BottomNavBar
-import com.example.playsymphonyapp.components.LanguageMenu
 import com.example.playsymphonyapp.Editor.ProjectViewModel
 import com.example.playsymphonyapp.screens.LibraryScreen
 import com.example.playsymphonyapp.screens.PlayerScreen
@@ -65,9 +64,6 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 Scaffold(
-                    topBar = {
-                        LanguageMenu()
-                    },
                     bottomBar = {
                         BottomNavBar(navController)
                     }

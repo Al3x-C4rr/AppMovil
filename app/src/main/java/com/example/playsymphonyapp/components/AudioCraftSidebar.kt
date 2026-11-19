@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -50,6 +51,8 @@ fun AudioCraftSidebar(
         SidebarItem(
             icon = Icons.Default.GraphicEq,
             label = "Tracks",
+            badge = "Premium",
+            badgeColor = Color(0xFFFFD700),
             isSelected = selectedSection == "Tracks",
             onClick = { onSectionSelected("Tracks") }
         )
@@ -74,6 +77,8 @@ fun AudioCraftSidebar(
 private fun SidebarItem(
     icon: ImageVector,
     label: String,
+    badge: String? = null,
+    badgeColor: Color = Color(0xFFFFD700),
     isSelected: Boolean = false,
     onClick: () -> Unit
 ) {
@@ -102,5 +107,14 @@ private fun SidebarItem(
             color = itemColor,
             fontSize = 10.sp
         )
+
+        if (badge != null) {
+            Text(
+                text = badge,
+                color = badgeColor,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
